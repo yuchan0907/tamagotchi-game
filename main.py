@@ -106,12 +106,11 @@ def draw_pet():
 
 
 def draw_stat_bars():
-    """■■■■□□□□□□ 모양의 스테이터스 바를 그린다."""
+    """■■■■□□□□□□ 7/10 모양의 스테이터스 바를 그린다."""
     for key in STAT_NAMES:
         value = game["stats"][key]
         bar = "■" * value + "□" * (STAT_MAX - value)
-        stat_bar_labels[key].config(text=bar)
-        stat_num_labels[key].config(text=f"{value}/{STAT_MAX}")
+        stat_labels[key].config(text=f"{bar}   {value}/{STAT_MAX}")
 
 
 def draw_status_window():
@@ -222,16 +221,13 @@ pet_label.pack(pady=4)
 # 스테이터스 바 (건강 / 행복 / 친밀도)
 stat_frame = tk.Frame(root, bg=BG_COLOR)
 stat_frame.pack(pady=6)
-stat_bar_labels = {}
-stat_num_labels = {}
+stat_labels = {}      # {"health": 막대 라벨, ...}  (내용은 draw_stat_bars()가 채움)
 row = 0
 for key in STAT_NAMES:
     tk.Label(stat_frame, text=STAT_NAMES[key], font=FONT_BOLD, bg=BG_COLOR,
              width=7, anchor="w").grid(row=row, column=0)
-    stat_bar_labels[key] = tk.Label(stat_frame, font=("Malgun Gothic", 12), bg=BG_COLOR)
-    stat_bar_labels[key].grid(row=row, column=1)
-    stat_num_labels[key] = tk.Label(stat_frame, font=FONT, bg=BG_COLOR, width=6)
-    stat_num_labels[key].grid(row=row, column=2)
+    stat_labels[key] = tk.Label(stat_frame, font=FONT, bg=BG_COLOR)
+    stat_labels[key].grid(row=row, column=1)
     row += 1
 
 # 상태창

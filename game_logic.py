@@ -51,6 +51,11 @@ def limit(value):
     return value
 
 
+def change_stat(stat, delta):
+    """스테이터스를 delta만큼 바꾼다. (0~10 범위 유지)"""
+    game["stats"][stat] = limit(game["stats"][stat] + delta)
+
+
 def season_name():
     return SEASONS[game["season"]]
 
@@ -140,17 +145,15 @@ def can_appear(choice):
     if "seasons" in choice and season_name() not in choice["seasons"]:
         return False
 
-    # 꼭 있어야 하는 상태
-    if "requires" in choice:
-        for name in choice["requires"]:
-            if name not in game["statuses"]:
-                return False
+    # 꼭 있어야 하는 상태 (.get(키, 기본값): 키가 없으면 기본값을 쓴다)
+    for name in choice.get("requires", []):
+        if name not in game["statuses"]:
+            return False
 
     # 있으면 안 되는 상태
-    if "forbids" in choice:
-        for name in choice["forbids"]:
-            if name in game["statuses"]:
-                return False
+    for name in choice.get("forbids", []):
+        if name in game["statuses"]:
+            return False
 
     return True
 
@@ -194,7 +197,7 @@ def apply_status_effects(log):
     # list(...)로 복사해서 도는 이유: 반복 중에 딕셔너리에서 지우면 오류가 나기 때문
     for name in list(game["statuses"]):
         for stat, delta in STATUSES[name]["per_turn"].items():
-            game["stats"][stat] = limit(game["stats"][stat] + delta)
+            change_stat(stat, delta)
             if delta > 0:
                 log.append(f"[{name}] {STAT_NAMES[stat]} {delta} 증가")
             else:
@@ -266,18 +269,14 @@ def choose(index):
     log = []
 
     # 1. 스테이터스 변화
-    if "stats" in option:
-        for stat, delta in option["stats"].items():
-            game["stats"][stat] = limit(game["stats"][stat] + delta)
+    for stat, delta in option.get("stats", {}).items():
+        change_stat(stat, delta)
 
     # 2. 상태 제거 / 추가
-    if "remove" in option:
-        for name in option["remove"]:
-            if name in game["statuses"]:
-                del game["statuses"][name]
-    if "add" in option:
-        for name, turns in option["add"].items():
-            add_status(name, turns, log)
+    for name in option.get("remove", []):
+        game["statuses"].pop(name, None)      # 있으면 지우고, 없으면 그냥 넘어감
+    for name, turns in option.get("add", {}).items():
+        add_status(name, turns, log)
 
     # 3. 기록 남기기 (엔딩 후 돌아보기)
     game["turn"] += 1

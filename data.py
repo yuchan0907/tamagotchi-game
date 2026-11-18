@@ -1,4 +1,8 @@
-"""게임 데이터: 상태, 선택지, 엔딩 정의 (UI/로직과 분리)."""
+"""게임 데이터 파일.
+
+상태, 선택지, 엔딩 같은 "내용"은 모두 이 파일에 있습니다.
+게임 내용을 바꾸고 싶으면 이 파일만 고치면 됩니다. (코드를 몰라도 수정 가능)
+"""
 
 STAT_NAMES = {
     "health": "건강",
@@ -14,51 +18,42 @@ INITIAL_STATS = {"health": 7, "happiness": 5, "intimacy": 3}
 
 # ---------------------------------------------------------------------------
 # 상태창에 표시되는 세부 상태
-#   turns      : 기본 지속 턴 수
-#   per_turn   : 매 턴마다 적용되는 스테이터스 변화
-#   immune_to  : 이 상태를 가지고 있는 동안 걸리지 않는 상태
-#   flavor     : 마우스 오버 시 보여줄 플레이버 텍스트
+#   per_turn   : 매 턴마다 적용되는 스테이터스 변화 (+1이면 증가, -1이면 감소)
+#   flavor     : 마우스 오버 시 보여줄 설명 문장
+# (지속 턴 수는 선택지의 "add"에서 정합니다. 예: "add": {"감기": 3})
+# (예방접종은 특별 규칙: 가지고 있는 동안 감기에 걸리지 않음 -> game_logic.py)
 # ---------------------------------------------------------------------------
 STATUSES = {
     "배부름": {
-        "turns": 2,
         "per_turn": {"happiness": 1},
         "flavor": "배가 빵빵하다. 꼬리를 살랑살랑 흔든다.",
     },
     "배고픔": {
-        "turns": 3,
         "per_turn": {"happiness": -1},
         "flavor": "빈 밥그릇만 바라보고 있다.",
     },
     "감기": {
-        "turns": 3,
         "per_turn": {"health": -1},
         "flavor": "콜록콜록. 코가 촉촉하다 못해 흥건하다.",
     },
     "건강함": {
-        "turns": 2,
         "per_turn": {"health": 1},
         "flavor": "털에 윤기가 흐르고 눈이 반짝인다.",
     },
     "우울": {
-        "turns": 3,
         "per_turn": {"happiness": -1},
         "flavor": "구석에서 귀를 축 늘어뜨리고 있다.",
     },
     "신남": {
-        "turns": 2,
         "per_turn": {"happiness": 1},
         "flavor": "온 집 안을 빙글빙글 뛰어다닌다!",
     },
     "부상": {
-        "turns": 3,
         "per_turn": {"health": -1},
         "flavor": "한쪽 다리를 절뚝거린다.",
     },
     "예방접종": {
-        "turns": 8,
         "per_turn": {},
-        "immune_to": ["감기"],
         "flavor": "주사는 무서웠지만, 이제 감기쯤은 문제없다.",
     },
 }
@@ -141,10 +136,14 @@ ENDINGS = {
 
 # ---------------------------------------------------------------------------
 # 선택지
-#   fixed_age : 해당 나이(의 첫 선택지)에 반드시 등장
-#   min_age / max_age / seasons / requires / forbids : 등장 조건
-#   weight    : 무작위 추첨 가중치
-#   options   : 답변 목록
+#   id        : 선택지 이름표 (겹치면 안 됨)
+#   prompt    : 화면에 나오는 상황 설명
+#   fixed_age : (선택) 이 나이가 되면 반드시 등장 (한 번만)
+#   min_age   : (선택) 이 나이 이상일 때만 등장
+#   seasons   : (선택) 이 계절에만 등장  예: ["겨울"]
+#   requires  : (선택) 이 상태를 가지고 있을 때만 등장  예: ["감기"]
+#   forbids   : (선택) 이 상태를 가지고 있으면 등장 안 함
+#   options   : 답변 목록 (1~3개까지만! 버튼이 3개라서)
 #       stats  : 스테이터스 변화
 #       add    : {상태: 지속 턴}  (이미 있으면 지속 턴을 덮어씀)
 #       remove : [상태, ...]
@@ -208,7 +207,6 @@ CHOICES = [
     {
         "id": "cold_care",
         "requires": ["감기"],
-        "weight": 6,
         "prompt": "다마고치의 상태가 어딘가 나빠 보인다. 콜록거리며 힘없이 누워 있다. 어떻게 할까?",
         "options": [
             {"text": "지극정성으로 돌본다", "stats": {"intimacy": 1, "health": 1}, "add": {"감기": 1},
@@ -222,7 +220,6 @@ CHOICES = [
     {
         "id": "hungry_care",
         "requires": ["배고픔"],
-        "weight": 6,
         "prompt": "다마고치가 배가 고파서 힘이 없어 보인다. 어떻게 할까?",
         "options": [
             {"text": "사료를 가득 준다", "stats": {"intimacy": 1}, "remove": ["배고픔"], "add": {"배부름": 2},
@@ -234,7 +231,6 @@ CHOICES = [
     {
         "id": "depressed_care",
         "requires": ["우울"],
-        "weight": 6,
         "prompt": "다마고치가 구석에서 꼼짝도 하지 않는다. 눈이 마주쳐도 꼬리를 흔들지 않는다.",
         "options": [
             {"text": "말없이 안아준다", "stats": {"intimacy": 2}, "remove": ["우울"],
@@ -248,7 +244,6 @@ CHOICES = [
     {
         "id": "injury_care",
         "requires": ["부상"],
-        "weight": 6,
         "prompt": "다마고치가 다리를 절뚝거린다. 어떻게 할까?",
         "options": [
             {"text": "동물병원에 데려간다", "stats": {"intimacy": 1, "happiness": -1}, "remove": ["부상"],
@@ -262,7 +257,6 @@ CHOICES = [
     {
         "id": "senior_care",
         "min_age": 7,
-        "weight": 4,
         "prompt": "다마고치가 하루 종일 누워 있다. 예전 같은 활기는 없다.",
         "options": [
             {"text": "곁을 지켜준다", "stats": {"intimacy": 2, "happiness": 1},
@@ -277,7 +271,6 @@ CHOICES = [
     {
         "id": "winter_cold",
         "seasons": ["겨울"],
-        "weight": 5,
         "prompt": "차가운 바람이 분다. 다마고치가 몸을 잔뜩 웅크리고 있다.",
         "options": [
             {"text": "따뜻한 옷을 입혀준다", "stats": {"intimacy": 1}, "add": {"건강함": 2},
@@ -291,7 +284,6 @@ CHOICES = [
     {
         "id": "summer_heat",
         "seasons": ["여름"],
-        "weight": 5,
         "prompt": "무더운 날이다. 다마고치가 혀를 길게 내밀고 헥헥거린다.",
         "options": [
             {"text": "시원한 물과 그늘을 마련해 준다", "stats": {"health": 1}, "add": {"건강함": 2},
@@ -305,7 +297,6 @@ CHOICES = [
     {
         "id": "summer_thunder",
         "seasons": ["여름"],
-        "weight": 4,
         "prompt": "한밤중 천둥이 쳤다. 다마고치가 이불 속으로 파고들어 덜덜 떨고 있다.",
         "options": [
             {"text": "꼭 안고 달래준다", "stats": {"intimacy": 2},
@@ -317,7 +308,6 @@ CHOICES = [
     {
         "id": "autumn_leaves",
         "seasons": ["가을"],
-        "weight": 5,
         "prompt": "낙엽이 수북이 쌓인 공원. 다마고치가 낙엽 더미 앞에서 눈을 반짝인다.",
         "options": [
             {"text": "같이 낙엽 위를 뒹군다", "stats": {"happiness": 1, "intimacy": 1}, "add": {"신남": 2},
@@ -329,7 +319,6 @@ CHOICES = [
     {
         "id": "spring_flowers",
         "seasons": ["봄"],
-        "weight": 5,
         "prompt": "꽃이 활짝 핀 봄날, 다마고치가 꽃밭을 향해 달려간다.",
         "options": [
             {"text": "함께 꽃놀이를 즐긴다", "stats": {"happiness": 1, "intimacy": 1},
@@ -342,7 +331,6 @@ CHOICES = [
         "id": "vaccine",
         "seasons": ["봄", "가을"],
         "forbids": ["예방접종"],
-        "weight": 4,
         "prompt": "동물병원에서 예방접종 안내 문자가 왔다. 어떻게 할까?",
         "options": [
             {"text": "예방접종을 맞히러 간다", "stats": {"happiness": -1}, "add": {"예방접종": 8},
@@ -355,7 +343,6 @@ CHOICES = [
     {
         "id": "hungry",
         "forbids": ["배부름", "배고픔"],
-        "weight": 6,
         "prompt": "다마고치가 빈 밥그릇 앞에서 낑낑거린다.",
         "options": [
             {"text": "사료를 준다", "stats": {"happiness": 1}, "add": {"배부름": 2},
@@ -368,7 +355,6 @@ CHOICES = [
     },
     {
         "id": "walk",
-        "weight": 6,
         "prompt": "다마고치가 리드줄을 입에 물고 현관 앞에 앉아 있다.",
         "options": [
             {"text": "산책을 나간다", "stats": {"health": 1, "happiness": 1, "intimacy": 1}, "add": {"신남": 2},
@@ -379,7 +365,6 @@ CHOICES = [
     },
     {
         "id": "ball",
-        "weight": 6,
         "prompt": "다마고치가 공을 물고 와서 당신의 발 앞에 내려놓는다.",
         "options": [
             {"text": "신나게 놀아준다", "stats": {"happiness": 2, "intimacy": 1}, "add": {"신남": 2},
@@ -390,7 +375,6 @@ CHOICES = [
     },
     {
         "id": "neighbor_dog",
-        "weight": 4,
         "prompt": "이웃집 강아지가 놀러 왔다. 다마고치와 서로 냄새를 맡고 있다.",
         "options": [
             {"text": "같이 놀게 해준다", "stats": {"happiness": 2}, "add": {"신남": 2},
@@ -401,7 +385,6 @@ CHOICES = [
     },
     {
         "id": "stranger_food",
-        "weight": 3,
         "prompt": "산책길, 바닥에 떨어진 정체불명의 음식을 발견한 다마고치가 눈을 반짝인다.",
         "options": [
             {"text": "줄을 당겨 막는다", "stats": {"happiness": -1},

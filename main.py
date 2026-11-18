@@ -1,250 +1,272 @@
-"""다마고치 키우기 - tkinter GUI.
+"""다마고치 키우기 - 화면(tkinter) 파일.
 
-실행: python3 main.py
+실행 방법:  python main.py
+
+이 파일은 "화면에 보여주기"만 담당합니다.
+게임 규칙은 game_logic.py, 게임 내용(선택지 등)은 data.py 에 있습니다.
 """
 
 import tkinter as tk
 from tkinter import scrolledtext
 
-from data import MAX_AGE, STAT_MAX, STAT_NAMES
-from game_logic import Game, describe_status
-
-BG = "#fdf6e3"
-PANEL = "#fffdf5"
-FG = "#3b3228"
-ACCENT = "#e0a458"
+import game_logic
+from game_logic import game
+from data import ENDINGS, MAX_AGE, STAT_MAX, STAT_NAMES
 
 FONT = ("Malgun Gothic", 11)
 FONT_BOLD = ("Malgun Gothic", 11, "bold")
-FONT_TITLE = ("Malgun Gothic", 16, "bold")
-FONT_BAR = ("Malgun Gothic", 12)
+FONT_BIG = ("Malgun Gothic", 16, "bold")
+
+# 툴팁(마우스 오버 설명 창)을 저장해 두는 리스트. 창이 하나만 뜨게 관리한다.
+tooltip_windows = []
 
 
-class Tooltip:
-    """위젯에 마우스를 올리면 설명 창을 띄운다."""
-
-    def __init__(self, widget, text_func):
-        self.widget = widget
-        self.text_func = text_func
-        self.tip = None
-        widget.bind("<Enter>", self.show)
-        widget.bind("<Leave>", self.hide)
-
-    def show(self, event):
-        self.hide()
-        self.tip = tk.Toplevel(self.widget)
-        self.tip.wm_overrideredirect(True)
-        self.tip.wm_geometry(f"+{event.x_root + 12}+{event.y_root + 12}")
-        tk.Label(
-            self.tip, text=self.text_func(), justify="left", bg="#fffbe6", fg=FG,
-            relief="solid", borderwidth=1, padx=10, pady=8, font=FONT,
-        ).pack()
-
-    def hide(self, _event=None):
-        if self.tip is not None:
-            self.tip.destroy()
-            self.tip = None
+# ======================================================================
+# 1. 버튼을 눌렀을 때 실행되는 함수들
+# ======================================================================
+def click_1():
+    play_turn(0)
 
 
-class App:
-    def __init__(self, root):
-        self.root = root
-        root.title("다마고치 키우기")
-        root.configure(bg=BG)
-        root.geometry("560x760")
-        root.minsize(520, 720)
-
-        self.game = None
-        self.build_widgets()
-        self.new_game()
-
-    # ------------------------------------------------------------------ UI 구성
-    def build_widgets(self):
-        # 헤더 (계절 / 나이 / 턴)
-        self.header = tk.Label(self.root, font=FONT_TITLE, bg=BG, fg=FG)
-        self.header.pack(pady=(14, 4))
-
-        # 다마고치 (캔버스로 직접 그린 강아지)
-        self.canvas = tk.Canvas(self.root, width=220, height=170, bg=PANEL,
-                                highlightthickness=1, highlightbackground=ACCENT)
-        self.canvas.pack(pady=4)
-
-        # 스테이터스 바
-        self.stat_frame = tk.Frame(self.root, bg=BG)
-        self.stat_frame.pack(pady=6)
-        self.stat_labels = {}
-        for row, (key, name) in enumerate(STAT_NAMES.items()):
-            tk.Label(self.stat_frame, text=name, font=FONT_BOLD, bg=BG, fg=FG,
-                     width=7, anchor="w").grid(row=row, column=0, padx=(0, 6))
-            bar = tk.Label(self.stat_frame, font=FONT_BAR, bg=BG, fg=FG, anchor="w")
-            bar.grid(row=row, column=1)
-            num = tk.Label(self.stat_frame, font=FONT, bg=BG, fg=FG, width=6)
-            num.grid(row=row, column=2)
-            self.stat_labels[key] = (bar, num)
-
-        # 상태창
-        status_box = tk.LabelFrame(self.root, text=" 상태창 ", font=FONT_BOLD,
-                                   bg=BG, fg=FG, padx=8, pady=6)
-        status_box.pack(fill="x", padx=20, pady=6)
-        self.status_inner = tk.Frame(status_box, bg=BG, height=34)
-        self.status_inner.pack(fill="x")
-        self.status_hint = tk.Label(status_box, text="상태에 마우스를 올려보세요.",
-                                    font=("Malgun Gothic", 9), bg=BG, fg="#9a8c78")
-        self.status_hint.pack(anchor="w")
-
-        # 이전 턴 결과
-        self.result_label = tk.Label(self.root, font=FONT, bg=BG, fg="#7a5c2e",
-                                     wraplength=500, justify="left", height=4,
-                                     anchor="nw")
-        self.result_label.pack(fill="x", padx=24, pady=(4, 0))
-
-        # 선택지
-        self.choice_frame = tk.Frame(self.root, bg=PANEL, highlightthickness=1,
-                                     highlightbackground=ACCENT)
-        self.choice_frame.pack(fill="both", expand=True, padx=20, pady=(4, 16))
-        self.prompt_label = tk.Label(self.choice_frame, font=FONT, bg=PANEL, fg=FG,
-                                     wraplength=480, justify="left")
-        self.prompt_label.pack(padx=14, pady=(14, 8), anchor="w")
-        self.button_frame = tk.Frame(self.choice_frame, bg=PANEL)
-        self.button_frame.pack(fill="x", padx=14, pady=(0, 12))
-
-    # ------------------------------------------------------------------ 게임 흐름
-    def new_game(self):
-        self.game = Game()
-        self.result_label.config(text="새로운 다마고치가 태어났다!")
-        self.refresh()
-
-    def on_choose(self, index):
-        result = self.game.choose(index)
-        lines = [f"▶ {result.result_text}"] if result.result_text else []
-        lines += [f"  {entry}" for entry in result.log]
-        self.result_label.config(text="\n".join(lines))
-        self.refresh()
-
-    # ------------------------------------------------------------------ 화면 갱신
-    def refresh(self):
-        g = self.game
-        self.header.config(text=f"{g.season}  ·  {g.age}살 / {MAX_AGE}살  ·  {g.turn}턴")
-        self.draw_pet()
-
-        for key, (bar, num) in self.stat_labels.items():
-            value = g.stats[key]
-            bar.config(text="■" * value + "□" * (STAT_MAX - value))
-            num.config(text=f"{value}/{STAT_MAX}")
-
-        self.draw_statuses()
-
-        for w in self.button_frame.winfo_children():
-            w.destroy()
-
-        if g.is_over:
-            self.show_ending()
-            return
-
-        choice = g.current_choice
-        self.prompt_label.config(text="* " + choice["prompt"])
-        for i, option in enumerate(choice["options"]):
-            tk.Button(
-                self.button_frame, text=f"{i + 1}. {option['text']}", font=FONT,
-                wraplength=440, justify="left", anchor="w", bg="#f6e7c8",
-                activebackground=ACCENT, relief="groove", padx=8, pady=6,
-                command=lambda idx=i: self.on_choose(idx),
-            ).pack(fill="x", pady=3)
-
-    def draw_statuses(self):
-        for w in self.status_inner.winfo_children():
-            w.destroy()
-        if not self.game.statuses:
-            tk.Label(self.status_inner, text="(특별한 상태 없음)", font=FONT,
-                     bg=BG, fg="#9a8c78").pack(side="left")
-            return
-        for name, remaining in self.game.statuses.items():
-            lbl = tk.Label(self.status_inner, text=name, font=FONT_BOLD, bg="#f6e7c8",
-                           fg=FG, relief="ridge", padx=8, pady=2)
-            lbl.pack(side="left", padx=3, pady=2)
-            Tooltip(lbl, lambda n=name, r=remaining: describe_status(n, r))
-
-    def draw_pet(self):
-        c = self.canvas
-        c.delete("all")
-        g = self.game
-        happy = g.stats["happiness"]
-        sick = g.stats["health"] <= 3 or "감기" in g.statuses or "부상" in g.statuses
-
-        fur = "#d9a66b" if not sick else "#c9b79b"
-        dark = "#8a5a2b"
-
-        # 꼬리
-        c.create_arc(150, 85, 200, 135, start=-20, extent=140, style="arc",
-                     outline=dark, width=6)
-        # 몸
-        c.create_oval(60, 95, 165, 160, fill=fur, outline=dark, width=2)
-        # 다리
-        c.create_oval(75, 140, 100, 165, fill=fur, outline=dark, width=2)
-        c.create_oval(125, 140, 150, 165, fill=fur, outline=dark, width=2)
-        # 귀
-        c.create_oval(55, 25, 90, 75, fill=dark, outline=dark)
-        c.create_oval(130, 25, 165, 75, fill=dark, outline=dark)
-        # 얼굴
-        c.create_oval(65, 30, 155, 110, fill=fur, outline=dark, width=2)
-        # 눈
-        if sick:
-            c.create_line(88, 62, 98, 72, fill=FG, width=3)
-            c.create_line(98, 62, 88, 72, fill=FG, width=3)
-            c.create_line(122, 62, 132, 72, fill=FG, width=3)
-            c.create_line(132, 62, 122, 72, fill=FG, width=3)
-        else:
-            c.create_oval(88, 60, 100, 74, fill=FG)
-            c.create_oval(120, 60, 132, 74, fill=FG)
-        # 코
-        c.create_oval(103, 78, 117, 90, fill=FG)
-        # 입 (행복도에 따라 표정 변화)
-        if happy >= 7:
-            c.create_arc(95, 82, 125, 104, start=200, extent=140, style="arc",
-                         outline=FG, width=2)
-        elif happy >= 4:
-            c.create_line(100, 98, 120, 98, fill=FG, width=2)
-        else:
-            c.create_arc(95, 96, 125, 116, start=20, extent=140, style="arc",
-                         outline=FG, width=2)
-
-    # ------------------------------------------------------------------ 엔딩
-    def show_ending(self):
-        info = self.game.ending_info()
-        mark = "★ " if info["good"] else "☆ "
-        self.prompt_label.config(text=f"{mark}엔딩: {info['title']}\n\n{info['text']}")
-        tk.Button(self.button_frame, text="우리의 선택들 돌아보기", font=FONT,
-                  bg="#f6e7c8", relief="groove", pady=6,
-                  command=self.show_history).pack(fill="x", pady=3)
-        tk.Button(self.button_frame, text="새 다마고치 키우기", font=FONT,
-                  bg="#f6e7c8", relief="groove", pady=6,
-                  command=self.new_game).pack(fill="x", pady=3)
-
-    def show_history(self):
-        win = tk.Toplevel(self.root)
-        win.title("다마고치와 함께한 선택들")
-        win.geometry("520x560")
-        win.configure(bg=BG)
-        text = scrolledtext.ScrolledText(win, wrap="word", font=FONT, bg=PANEL, fg=FG)
-        text.pack(fill="both", expand=True, padx=10, pady=10)
-
-        text.tag_configure("head", font=FONT_BOLD, foreground="#7a5c2e")
-        text.tag_configure("chosen", foreground="#2b6a4f")
-        for rec in self.game.history:
-            text.insert("end", f"[{rec['turn']}턴 · {rec['age']}살 {rec['season']}]\n", "head")
-            text.insert("end", f"{rec['prompt']}\n")
-            text.insert("end", f"→ {rec['chosen']}\n", "chosen")
-            if rec["result"]:
-                text.insert("end", f"   {rec['result']}\n")
-            text.insert("end", "\n")
-        text.config(state="disabled")
+def click_2():
+    play_turn(1)
 
 
-def main():
-    root = tk.Tk()
-    App(root)
-    root.mainloop()
+def click_3():
+    play_turn(2)
 
 
-if __name__ == "__main__":
-    main()
+def play_turn(index):
+    """index번째 선택지를 골라 한 턴 진행하고 화면을 새로 그린다."""
+    result = game_logic.choose(index)
+
+    lines = []
+    if result["text"] != "":
+        lines.append("▶ " + result["text"])
+    for message in result["log"]:
+        lines.append("   " + message)
+    result_label.config(text="\n".join(lines))
+
+    refresh()
+
+
+def start_new_game():
+    game_logic.new_game()
+    result_label.config(text="새로운 다마고치가 태어났다!")
+    refresh()
+
+
+# ======================================================================
+# 2. 마우스 오버 설명 창 (상태창)
+# ======================================================================
+def show_tooltip(event):
+    hide_tooltip(event)
+    status_name = event.widget.cget("text")     # 마우스를 올린 라벨의 글자 = 상태 이름
+
+    window = tk.Toplevel(root)
+    window.wm_overrideredirect(True)            # 제목 표시줄 없는 작은 창
+    window.wm_geometry(f"+{event.x_root + 12}+{event.y_root + 12}")
+    tk.Label(window, text=game_logic.status_description(status_name),
+             justify="left", bg="#fffbe6", relief="solid", borderwidth=1,
+             padx=10, pady=8, font=FONT).pack()
+    tooltip_windows.append(window)
+
+
+def hide_tooltip(event):
+    for window in tooltip_windows:
+        window.destroy()
+    tooltip_windows.clear()
+
+
+# ======================================================================
+# 3. 화면 그리기
+# ======================================================================
+def draw_pet():
+    """캔버스에 강아지를 그린다. 행복도/건강에 따라 표정이 바뀐다."""
+    canvas.delete("all")
+    happiness = game["stats"]["happiness"]
+    sick = game["stats"]["health"] <= 3 or "감기" in game["statuses"]
+
+    if sick:
+        fur = "#c9b79b"     # 아프면 털 색이 칙칙해짐
+    else:
+        fur = "#d9a66b"
+    dark = "#8a5a2b"
+
+    canvas.create_oval(60, 95, 165, 160, fill=fur, outline=dark, width=2)    # 몸
+    canvas.create_oval(55, 25, 90, 75, fill=dark, outline=dark)              # 왼쪽 귀
+    canvas.create_oval(130, 25, 165, 75, fill=dark, outline=dark)            # 오른쪽 귀
+    canvas.create_oval(65, 30, 155, 110, fill=fur, outline=dark, width=2)    # 얼굴
+    canvas.create_oval(88, 60, 100, 74, fill="black")                        # 왼쪽 눈
+    canvas.create_oval(120, 60, 132, 74, fill="black")                       # 오른쪽 눈
+    canvas.create_oval(103, 78, 117, 90, fill="black")                       # 코
+
+    # 입 모양: 행복도에 따라 웃는 입 / 일자 입 / 슬픈 입
+    if happiness >= 7:
+        canvas.create_arc(95, 82, 125, 104, start=200, extent=140, style="arc", width=2)
+    elif happiness >= 4:
+        canvas.create_line(100, 98, 120, 98, width=2)
+    else:
+        canvas.create_arc(95, 96, 125, 116, start=20, extent=140, style="arc", width=2)
+
+
+def draw_stat_bars():
+    """■■■■□□□□□□ 모양의 스테이터스 바를 그린다."""
+    for key in STAT_NAMES:
+        value = game["stats"][key]
+        bar = "■" * value + "□" * (STAT_MAX - value)
+        stat_bar_labels[key].config(text=bar)
+        stat_num_labels[key].config(text=f"{value}/{STAT_MAX}")
+
+
+def draw_status_window():
+    """상태창: 가지고 있는 상태를 작은 라벨로 나열한다."""
+    # 이전에 그렸던 라벨 지우기
+    for widget in status_frame.winfo_children():
+        widget.destroy()
+
+    if len(game["statuses"]) == 0:
+        tk.Label(status_frame, text="(특별한 상태 없음)", font=FONT).pack(side="left")
+        return
+
+    for name in game["statuses"]:
+        label = tk.Label(status_frame, text=name, font=FONT_BOLD,
+                         bg="#f6e7c8", relief="ridge", padx=8, pady=2)
+        label.pack(side="left", padx=3)
+        label.bind("<Enter>", show_tooltip)     # 마우스를 올리면
+        label.bind("<Leave>", hide_tooltip)     # 마우스를 내리면
+
+
+def refresh():
+    """화면 전체를 현재 game 상태에 맞게 다시 그린다."""
+    header_label.config(
+        text=f"{game_logic.season_name()}  ·  {game['age']}살 / {MAX_AGE}살  ·  {game['turn']}턴")
+    draw_pet()
+    draw_stat_bars()
+    draw_status_window()
+
+    if game["ending"] != "":
+        show_ending()
+    else:
+        show_choice()
+
+
+def show_choice():
+    """선택지 문장과 버튼을 보여준다."""
+    choice = game["choice"]
+    prompt_label.config(text="* " + choice["prompt"])
+
+    options = choice["options"]
+    click_functions = [click_1, click_2, click_3]
+
+    # 버튼 3개를 일단 모두 숨긴 뒤, 필요한 개수만 다시 보여준다
+    for button in buttons:
+        button.pack_forget()
+    for i in range(len(options)):
+        buttons[i].config(text=f"{i + 1}. {options[i]['text']}", command=click_functions[i])
+        buttons[i].pack(fill="x", pady=3)
+
+
+def show_ending():
+    """엔딩 문장과 버튼(돌아보기 / 새로 시작)을 보여준다."""
+    info = ENDINGS[game["ending"]]
+    if info["good"]:
+        mark = "★"
+    else:
+        mark = "☆"
+    prompt_label.config(text=f"{mark} 엔딩: {info['title']}\n\n{info['text']}")
+
+    for button in buttons:
+        button.pack_forget()
+    buttons[0].config(text="우리의 선택들 돌아보기", command=show_history)
+    buttons[1].config(text="새 다마고치 키우기", command=start_new_game)
+    buttons[0].pack(fill="x", pady=3)
+    buttons[1].pack(fill="x", pady=3)
+
+
+def show_history():
+    """엔딩 후, 지금까지의 선택 기록을 새 창에 보여준다."""
+    window = tk.Toplevel(root)
+    window.title("다마고치와 함께한 선택들")
+    window.geometry("520x560")
+
+    text_box = scrolledtext.ScrolledText(window, wrap="word", font=FONT)
+    text_box.pack(fill="both", expand=True, padx=10, pady=10)
+
+    for record in game["history"]:
+        text_box.insert("end", f"[{record['turn']}턴 · {record['age']}살 {record['season']}]\n")
+        text_box.insert("end", record["prompt"] + "\n")
+        text_box.insert("end", "→ " + record["chosen"] + "\n")
+        if record["result"] != "":
+            text_box.insert("end", "   " + record["result"] + "\n")
+        text_box.insert("end", "\n")
+
+    text_box.config(state="disabled")     # 읽기 전용
+
+
+# ======================================================================
+# 4. 화면 배치 (프로그램이 시작할 때 한 번만 실행)
+# ======================================================================
+root = tk.Tk()
+root.title("다마고치 키우기")
+root.geometry("560x760")
+root.configure(bg="#fdf6e3")
+
+# 맨 위: 계절 / 나이 / 턴
+header_label = tk.Label(root, font=FONT_BIG, bg="#fdf6e3")
+header_label.pack(pady=(14, 4))
+
+# 강아지 그림
+canvas = tk.Canvas(root, width=220, height=170, bg="#fffdf5")
+canvas.pack(pady=4)
+
+# 스테이터스 바 (건강 / 행복 / 친밀도)
+stat_frame = tk.Frame(root, bg="#fdf6e3")
+stat_frame.pack(pady=6)
+stat_bar_labels = {}
+stat_num_labels = {}
+row = 0
+for key in STAT_NAMES:
+    tk.Label(stat_frame, text=STAT_NAMES[key], font=FONT_BOLD, bg="#fdf6e3",
+             width=7, anchor="w").grid(row=row, column=0)
+    stat_bar_labels[key] = tk.Label(stat_frame, font=("Malgun Gothic", 12), bg="#fdf6e3")
+    stat_bar_labels[key].grid(row=row, column=1)
+    stat_num_labels[key] = tk.Label(stat_frame, font=FONT, bg="#fdf6e3", width=6)
+    stat_num_labels[key].grid(row=row, column=2)
+    row += 1
+
+# 상태창
+status_box = tk.LabelFrame(root, text=" 상태창 ", font=FONT_BOLD, bg="#fdf6e3", padx=8, pady=6)
+status_box.pack(fill="x", padx=20, pady=6)
+status_frame = tk.Frame(status_box, bg="#fdf6e3", height=34)
+status_frame.pack(fill="x")
+tk.Label(status_box, text="상태에 마우스를 올려보세요.", font=("Malgun Gothic", 9),
+         bg="#fdf6e3", fg="gray").pack(anchor="w")
+
+# 직전 선택의 결과 문장
+result_label = tk.Label(root, font=FONT, bg="#fdf6e3", fg="#7a5c2e", wraplength=500,
+                        justify="left", height=4, anchor="nw")
+result_label.pack(fill="x", padx=24, pady=(4, 0))
+
+# 선택지 영역
+choice_frame = tk.Frame(root, bg="#fffdf5", highlightthickness=1)
+choice_frame.pack(fill="both", expand=True, padx=20, pady=(4, 16))
+prompt_label = tk.Label(choice_frame, font=FONT, bg="#fffdf5", wraplength=480, justify="left")
+prompt_label.pack(padx=14, pady=(14, 8), anchor="w")
+
+button_frame = tk.Frame(choice_frame, bg="#fffdf5")
+button_frame.pack(fill="x", padx=14, pady=(0, 12))
+
+# 선택지 버튼 3개 (선택지가 2개면 3번째 버튼은 숨겨짐)
+buttons = []
+for i in range(3):
+    button = tk.Button(button_frame, font=FONT, wraplength=440, justify="left",
+                       anchor="w", bg="#f6e7c8", padx=8, pady=6)
+    buttons.append(button)
+
+
+# ======================================================================
+# 5. 게임 시작
+# ======================================================================
+start_new_game()
+root.mainloop()

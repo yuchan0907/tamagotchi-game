@@ -1,218 +1,269 @@
-"""다마고치 게임 로직 (UI와 무관한 순수 파이썬)."""
+"""게임 규칙 파일 (화면과 상관없는 부분).
+
+이 파일에는 "게임이 어떻게 진행되는가"가 들어 있습니다.
+- 새 게임 시작
+- 선택지 뽑기
+- 선택했을 때 스테이터스/상태 변화
+- 계절/나이 흐름
+- 엔딩 판정
+
+게임의 현재 상태는 game 이라는 딕셔너리 하나에 모아서 관리합니다.
+"""
 
 import random
-from dataclasses import dataclass, field
 
 from data import (
-    CHOICES,
-    ENDINGS,
-    INITIAL_STATS,
-    MAX_AGE,
-    SEASONS,
-    STAT_MAX,
-    STAT_NAMES,
-    STATUSES,
+    CHOICES, ENDINGS, INITIAL_STATS, MAX_AGE, SEASONS, STAT_MAX, STAT_NAMES, STATUSES,
 )
 
+# 게임의 현재 상태를 담는 딕셔너리 (new_game()을 부르면 채워집니다)
+game = {}
 
-def clamp(value, low=0, high=STAT_MAX):
-    return max(low, min(high, value))
+
+# ----------------------------------------------------------------------
+# 1. 새 게임
+# ----------------------------------------------------------------------
+def new_game():
+    game.clear()
+    game["stats"] = dict(INITIAL_STATS)   # 건강, 행복, 친밀도 (복사본)
+    game["statuses"] = {}                 # 상태창: {"감기": 남은 턴 수, ...}
+    game["age"] = 0                       # 나이
+    game["season"] = 0                    # 0=봄, 1=여름, 2=가을, 3=겨울
+    game["turn"] = 0                      # 지금까지 진행한 턴 수
+    game["history"] = []                  # 엔딩 후 돌아보기용 기록
+    game["shown_fixed"] = []              # 이미 나온 "나이 고정" 선택지 id
+    game["last_id"] = ""                  # 바로 직전에 나온 선택지 id
+    game["ending"] = ""                   # 엔딩 키 ("" 이면 아직 게임 중)
+    game["choice"] = None                 # 지금 화면에 나온 선택지
+    pick_next_choice()
 
 
-def describe_status(name, remaining=None):
-    """상태 이름 -> 마우스 오버 툴팁용 설명 문자열."""
+# ----------------------------------------------------------------------
+# 2. 작은 도우미 함수들
+# ----------------------------------------------------------------------
+def limit(value):
+    """스테이터스는 0 ~ 10 사이로 유지한다."""
+    if value < 0:
+        return 0
+    if value > STAT_MAX:
+        return STAT_MAX
+    return value
+
+
+def season_name():
+    return SEASONS[game["season"]]
+
+
+def status_description(name):
+    """상태 이름에 마우스를 올렸을 때 보여줄 설명 글을 만든다."""
     info = STATUSES[name]
     lines = []
+
     for stat, delta in info["per_turn"].items():
-        verb = "증가" if delta > 0 else "감소"
-        lines.append(f"매 턴마다 {STAT_NAMES[stat]}이(가) {abs(delta)} {verb}합니다")
-    for immune in info.get("immune_to", []):
-        lines.append(f"'{immune}' 상태에 걸리지 않습니다")
-    if info.get("flavor"):
-        lines.append("")
-        lines.append(info["flavor"])
-    if remaining is not None:
-        lines.append("")
-        lines.append(f"남은 턴 수 : {remaining}")
+        if delta > 0:
+            lines.append(f"매 턴마다 {STAT_NAMES[stat]}이(가) {delta} 증가합니다")
+        else:
+            lines.append(f"매 턴마다 {STAT_NAMES[stat]}이(가) {-delta} 감소합니다")
+
+    if name == "예방접종":
+        lines.append("'감기' 상태에 걸리지 않습니다")
+
+    lines.append("")
+    lines.append(info["flavor"])
+    lines.append("")
+    lines.append(f"남은 턴 수 : {game['statuses'][name]}")
     return "\n".join(lines)
 
 
-@dataclass
-class TurnResult:
-    result_text: str = ""
-    stat_changes: dict = field(default_factory=dict)   # 선택지로 인한 변화
-    log: list = field(default_factory=list)            # 상태 효과/계절 등 알림
-    ending: str | None = None
+# ----------------------------------------------------------------------
+# 3. 선택지 뽑기
+# ----------------------------------------------------------------------
+def can_appear(choice):
+    """이 선택지가 지금 나올 수 있는지 검사한다. (True / False)"""
+    # 나이 고정 선택지는 일반 추첨에서 제외
+    if "fixed_age" in choice:
+        return False
+
+    # 방금 나온 선택지는 연속으로 안 나오게
+    if choice["id"] == game["last_id"]:
+        return False
+
+    # 나이 조건
+    if "min_age" in choice and game["age"] < choice["min_age"]:
+        return False
+
+    # 계절 조건
+    if "seasons" in choice and season_name() not in choice["seasons"]:
+        return False
+
+    # 꼭 있어야 하는 상태
+    if "requires" in choice:
+        for name in choice["requires"]:
+            if name not in game["statuses"]:
+                return False
+
+    # 있으면 안 되는 상태
+    if "forbids" in choice:
+        for name in choice["forbids"]:
+            if name in game["statuses"]:
+                return False
+
+    return True
 
 
-class Game:
-    def __init__(self, seed=None):
-        self.rng = random.Random(seed)
-        self.stats = dict(INITIAL_STATS)
-        self.statuses = {}          # 상태 이름 -> 남은 턴 수
-        self.age = 0
-        self.season_index = 0
-        self.turn = 0
-        self.history = []           # 엔딩 후 돌아보기용 기록
-        self.shown_fixed = set()
-        self.recent_ids = []
-        self.ending = None          # 엔딩 키
-        self.current_choice = None
-        self.current_choice_id = None
-        self.next_choice()
-
-    # ----- 조회 -----
-    @property
-    def season(self):
-        return SEASONS[self.season_index]
-
-    @property
-    def is_over(self):
-        return self.ending is not None
-
-    def ending_info(self):
-        return ENDINGS[self.ending] if self.ending else None
-
-    # ----- 선택지 추첨 -----
-    def _eligible(self, choice):
-        if choice.get("fixed_age") is not None:
-            return False
-        if self.age < choice.get("min_age", 0) or self.age > choice.get("max_age", MAX_AGE):
-            return False
-        if "seasons" in choice and self.season not in choice["seasons"]:
-            return False
-        if any(s not in self.statuses for s in choice.get("requires", [])):
-            return False
-        if any(s in self.statuses for s in choice.get("forbids", [])):
-            return False
-        return True
-
-    def next_choice(self):
-        # 1) 이번 나이의 고정 선택지가 아직 안 나왔으면 우선 등장
-        for choice in CHOICES:
-            if choice.get("fixed_age") == self.age and choice["id"] not in self.shown_fixed:
-                self.shown_fixed.add(choice["id"])
-                self._set_choice(choice)
+def pick_next_choice():
+    """다음에 보여줄 선택지를 정해서 game["choice"]에 넣는다."""
+    # 1) 이번 나이에 꼭 나와야 하는 선택지가 있으면 먼저 보여준다
+    for choice in CHOICES:
+        if choice.get("fixed_age") == game["age"]:
+            if choice["id"] not in game["shown_fixed"]:
+                game["shown_fixed"].append(choice["id"])
+                game["choice"] = choice
+                game["last_id"] = choice["id"]
                 return
 
-        # 2) 조건에 맞는 선택지 중 가중치 추첨 (최근 3개는 제외)
-        pool = [c for c in CHOICES if self._eligible(c)]
-        fresh = [c for c in pool if c["id"] not in self.recent_ids]
-        pool = fresh or pool
-        weights = [c.get("weight", 3) for c in pool]
-        self._set_choice(self.rng.choices(pool, weights=weights, k=1)[0])
+    # 2) 나올 수 있는 선택지를 모아서 그중 하나를 무작위로 뽑는다
+    candidates = []
+    for choice in CHOICES:
+        if can_appear(choice):
+            candidates.append(choice)
 
-    def _set_choice(self, choice):
-        self.current_choice = choice
-        self.current_choice_id = choice["id"]
-        self.recent_ids = (self.recent_ids + [choice["id"]])[-3:]
+    chosen = random.choice(candidates)
+    game["choice"] = chosen
+    game["last_id"] = chosen["id"]
 
-    # ----- 상태 조작 -----
-    def _add_status(self, name, turns, log):
-        for owned in self.statuses:
-            if name in STATUSES[owned].get("immune_to", []):
-                log.append(f"'{owned}' 덕분에 '{name}' 상태를 막았다!")
-                return
-        self.statuses[name] = turns
 
-    def _change_stat(self, stat, delta):
-        before = self.stats[stat]
-        self.stats[stat] = clamp(before + delta)
-        return self.stats[stat] - before
+# ----------------------------------------------------------------------
+# 4. 선택지를 골랐을 때 (한 턴 진행)
+# ----------------------------------------------------------------------
+def add_status(name, turns, log):
+    """상태창에 상태를 추가한다. (이미 있으면 남은 턴을 덮어씀)"""
+    # 예방접종을 맞았다면 감기는 걸리지 않는다
+    if name == "감기" and "예방접종" in game["statuses"]:
+        log.append("예방접종 덕분에 '감기'를 막았다!")
+        return
+    game["statuses"][name] = turns
 
-    # ----- 턴 진행 -----
-    def choose(self, index):
-        """선택지 index를 고르고 한 턴을 진행한다. TurnResult를 반환."""
-        if self.is_over:
-            raise RuntimeError("이미 엔딩이 난 게임입니다.")
 
-        choice = self.current_choice
-        option = choice["options"][index]
-        result = TurnResult(result_text=option.get("result", ""))
+def apply_status_effects(log):
+    """상태창에 있는 모든 상태의 효과를 발동하고, 남은 턴을 1 줄인다."""
+    # list(...)로 복사해서 도는 이유: 반복 중에 딕셔너리에서 지우면 오류가 나기 때문
+    for name in list(game["statuses"]):
+        for stat, delta in STATUSES[name]["per_turn"].items():
+            game["stats"][stat] = limit(game["stats"][stat] + delta)
+            if delta > 0:
+                log.append(f"[{name}] {STAT_NAMES[stat]} {delta} 증가")
+            else:
+                log.append(f"[{name}] {STAT_NAMES[stat]} {-delta} 감소")
 
-        # 1. 선택지 효과
-        for stat, delta in option.get("stats", {}).items():
-            result.stat_changes[stat] = self._change_stat(stat, delta)
-        for name in option.get("remove", []):
-            self.statuses.pop(name, None)
-        for name, turns in option.get("add", {}).items():
-            self._add_status(name, turns, result.log)
+        game["statuses"][name] -= 1
+        if game["statuses"][name] <= 0:
+            del game["statuses"][name]
+            log.append(f"[{name}] 상태가 끝났다.")
 
-        # 2. 기록
-        self.history.append({
-            "turn": self.turn + 1,
-            "age": self.age,
-            "season": self.season,
-            "prompt": choice["prompt"],
-            "chosen": option["text"],
-            "result": option.get("result", ""),
-        })
-        self.turn += 1
 
-        # 3. 즉시 엔딩 (매우 잘못된 선택)
-        if option.get("ending"):
-            self.ending = option["ending"]
-            result.ending = self.ending
-            return result
+def check_stat_ending():
+    """스테이터스가 0이 되어 끝나는 엔딩이 있는지 검사한다."""
+    if game["stats"]["health"] <= 0:
+        return "sick"
+    if game["stats"]["happiness"] <= 0:
+        return "runaway"
+    if game["stats"]["intimacy"] <= 0:
+        return "strayed"
+    return ""
 
-        # 4. 상태 효과 발동 및 지속 턴 감소
-        for name in list(self.statuses):
-            for stat, delta in STATUSES[name]["per_turn"].items():
-                self._change_stat(stat, delta)
-                verb = "증가" if delta > 0 else "감소"
-                result.log.append(f"[{name}] {STAT_NAMES[stat]} {abs(delta)} {verb}")
-            self.statuses[name] -= 1
-            if self.statuses[name] <= 0:
-                del self.statuses[name]
-                result.log.append(f"[{name}] 상태가 끝났다.")
 
-        # 5. 스테이터스 바닥 엔딩
-        ending = self._check_stat_ending()
-        if not ending:
-            # 6. 계절/나이 진행 후 엔딩 판정
-            ending = self._advance_season(result)
-        if ending:
-            self.ending = ending
-            result.ending = ending
-        else:
-            self.next_choice()
+def final_ending():
+    """MAX_AGE살까지 키웠을 때의 엔딩을 스테이터스로 정한다."""
+    stats = game["stats"]
+    if stats["intimacy"] >= 8:
+        return "bond"
+    if stats["happiness"] >= 8:
+        return "joyful"
+    if stats["health"] >= 8:
+        return "healthy"
+    return "ordinary"
+
+
+def advance_season(log):
+    """계절을 한 칸 넘기고, 나이/엔딩을 처리한다. 엔딩이 나면 엔딩 키를 돌려준다."""
+    game["season"] += 1
+
+    # 겨울(3) 다음은 다시 봄(0) -> 한 살 먹는다
+    if game["season"] >= len(SEASONS):
+        game["season"] = 0
+        game["age"] += 1
+        log.append(f"다마고치가 {game['age']}살이 되었다!")
+        if game["age"] >= MAX_AGE:
+            return final_ending()
+
+    log.append(f"계절이 {season_name()}(으)로 바뀌었다.")
+
+    # 7살부터는 계절이 바뀔 때마다 자연사 확률이 생긴다
+    if game["age"] >= 7:
+        chance = 0.06 * (game["age"] - 6)      # 나이가 많을수록 확률 증가
+        if game["stats"]["health"] >= 7:
+            chance = chance / 2                # 건강하면 확률 절반
+        if random.random() < chance:
+            if game["stats"]["intimacy"] >= 7:
+                return "natural_warm"
+            return "natural_lonely"
+
+    return ""
+
+
+def choose(index):
+    """플레이어가 index번째(0부터) 선택지를 골랐을 때 한 턴을 진행한다.
+
+    돌려주는 값: {"text": 결과 문장, "log": [알림 문장들]}
+    엔딩이 나면 game["ending"]에 엔딩 키가 들어간다.
+    """
+    option = game["choice"]["options"][index]
+    log = []
+
+    # 1. 스테이터스 변화
+    if "stats" in option:
+        for stat, delta in option["stats"].items():
+            game["stats"][stat] = limit(game["stats"][stat] + delta)
+
+    # 2. 상태 제거 / 추가
+    if "remove" in option:
+        for name in option["remove"]:
+            if name in game["statuses"]:
+                del game["statuses"][name]
+    if "add" in option:
+        for name, turns in option["add"].items():
+            add_status(name, turns, log)
+
+    # 3. 기록 남기기 (엔딩 후 돌아보기)
+    game["turn"] += 1
+    game["history"].append({
+        "turn": game["turn"],
+        "age": game["age"],
+        "season": season_name(),
+        "prompt": game["choice"]["prompt"],
+        "chosen": option["text"],
+        "result": option.get("result", ""),
+    })
+
+    result = {"text": option.get("result", ""), "log": log}
+
+    # 4. 매우 잘못된 선택 -> 바로 엔딩
+    if "ending" in option:
+        game["ending"] = option["ending"]
         return result
 
-    def _check_stat_ending(self):
-        if self.stats["health"] <= 0:
-            return "sick"
-        if self.stats["happiness"] <= 0:
-            return "runaway"
-        if self.stats["intimacy"] <= 0:
-            return "strayed"
-        return None
+    # 5. 상태 효과 발동
+    apply_status_effects(log)
 
-    def _advance_season(self, result):
-        self.season_index += 1
-        if self.season_index >= len(SEASONS):
-            self.season_index = 0
-            self.age += 1
-            result.log.append(f"다마고치가 {self.age}살이 되었다!")
-            if self.age >= MAX_AGE:
-                return self._final_ending()
-        result.log.append(f"계절이 {self.season}(으)로 바뀌었다.")
+    # 6. 엔딩 검사: 스테이터스 -> 계절/나이
+    ending = check_stat_ending()
+    if ending == "":
+        ending = advance_season(log)
 
-        # 노령 자연사 확률 (7살부터)
-        if self.age >= 7:
-            chance = 0.06 * (self.age - 6)
-            if self.stats["health"] >= 7:
-                chance *= 0.5
-            if self.rng.random() < chance:
-                warm = self.stats["intimacy"] >= 7
-                return "natural_warm" if warm else "natural_lonely"
-        return None
+    if ending != "":
+        game["ending"] = ending
+    else:
+        pick_next_choice()
 
-    def _final_ending(self):
-        s = self.stats
-        if s["intimacy"] >= 8:
-            return "bond"
-        if s["happiness"] >= 8:
-            return "joyful"
-        if s["health"] >= 8:
-            return "healthy"
-        return "ordinary"
+    return result

@@ -145,6 +145,7 @@ tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요
 | 자연사 확률 / 시작 나이 | `game_logic.py` → `advance_season()` |
 | 10살 엔딩 조건 | `game_logic.py` → `final_ending()` |
 | 글꼴 / 창 크기 | `main.py` 맨 위 `FONT...`, `root.geometry(...)` |
+| 화면 색깔 | `main.py` 맨 위 `BG_COLOR` 등. `"brown"`, `"wheat"`처럼 **색 이름**으로 씁니다 ([색 이름 목록](https://www.tcl.tk/man/tcl8.6/TkCmd/colors.htm)) |
 
 ### 5. 이미지 바꾸기 / 추가하기
 

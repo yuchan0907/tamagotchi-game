@@ -25,6 +25,16 @@ FONT = ("Malgun Gothic", 11)
 FONT_BOLD = ("Malgun Gothic", 11, "bold")
 FONT_BIG = ("Malgun Gothic", 16, "bold")
 
+# 색깔 설정: "#fdf6e3" 같은 숫자 코드 대신 brown, wheat 처럼 이름으로 씁니다.
+# 색을 바꾸고 싶으면 여기 이름만 바꾸면 화면 전체에 적용됩니다.
+# 사용할 수 있는 색 이름 목록: https://www.tcl.tk/man/tcl8.6/TkCmd/colors.htm
+BG_COLOR = "oldlace"          # 전체 배경 (크림색)
+PANEL_COLOR = "floralwhite"   # 선택지가 나오는 칸의 배경
+BUTTON_COLOR = "wheat"        # 선택지 버튼, 상태창 라벨
+TIP_COLOR = "lightyellow"     # 마우스 오버 설명 창
+TEXT_COLOR = "saddlebrown"    # 선택 결과 문장 글자색
+GUIDE_COLOR = "gray"          # 안내 문구 글자색
+
 # 툴팁(마우스 오버 설명 창)을 저장해 두는 리스트. 창이 하나만 뜨게 관리한다.
 tooltip_windows = []
 
@@ -75,7 +85,7 @@ def show_tooltip(event):
     window.wm_overrideredirect(True)            # 제목 표시줄 없는 작은 창
     window.wm_geometry(f"+{event.x_root + 12}+{event.y_root + 12}")
     tk.Label(window, text=game_logic.status_description(status_name),
-             justify="left", bg="#fffbe6", relief="solid", borderwidth=1,
+             justify="left", bg=TIP_COLOR, relief="solid", borderwidth=1,
              padx=10, pady=8, font=FONT).pack()
     tooltip_windows.append(window)
 
@@ -116,7 +126,7 @@ def draw_status_window():
 
     for name in game["statuses"]:
         label = tk.Label(status_frame, text=name, font=FONT_BOLD,
-                         bg="#f6e7c8", relief="ridge", padx=8, pady=2)
+                         bg=BUTTON_COLOR, relief="ridge", padx=8, pady=2)
         label.pack(side="left", padx=3)
         label.bind("<Enter>", show_tooltip)     # 마우스를 올리면
         label.bind("<Leave>", hide_tooltip)     # 마우스를 내리면
@@ -195,10 +205,10 @@ def show_history():
 root = tk.Tk()
 root.title("다마고치 키우기")
 root.geometry("560x760")
-root.configure(bg="#fdf6e3")
+root.configure(bg=BG_COLOR)
 
 # 맨 위: 계절 / 나이 / 턴
-header_label = tk.Label(root, font=FONT_BIG, bg="#fdf6e3")
+header_label = tk.Label(root, font=FONT_BIG, bg=BG_COLOR)
 header_label.pack(pady=(14, 4))
 
 # images 폴더의 PNG 파일을 모두 불러온다 (창을 만든 뒤에 해야 함)
@@ -206,51 +216,51 @@ for image_name in IMAGE_NAMES:
     images[image_name] = tk.PhotoImage(file=os.path.join(IMAGE_FOLDER, image_name + ".png"))
 
 # 강아지 그림이 표시될 자리
-pet_label = tk.Label(root, bg="#fdf6e3")
+pet_label = tk.Label(root, bg=BG_COLOR)
 pet_label.pack(pady=4)
 
 # 스테이터스 바 (건강 / 행복 / 친밀도)
-stat_frame = tk.Frame(root, bg="#fdf6e3")
+stat_frame = tk.Frame(root, bg=BG_COLOR)
 stat_frame.pack(pady=6)
 stat_bar_labels = {}
 stat_num_labels = {}
 row = 0
 for key in STAT_NAMES:
-    tk.Label(stat_frame, text=STAT_NAMES[key], font=FONT_BOLD, bg="#fdf6e3",
+    tk.Label(stat_frame, text=STAT_NAMES[key], font=FONT_BOLD, bg=BG_COLOR,
              width=7, anchor="w").grid(row=row, column=0)
-    stat_bar_labels[key] = tk.Label(stat_frame, font=("Malgun Gothic", 12), bg="#fdf6e3")
+    stat_bar_labels[key] = tk.Label(stat_frame, font=("Malgun Gothic", 12), bg=BG_COLOR)
     stat_bar_labels[key].grid(row=row, column=1)
-    stat_num_labels[key] = tk.Label(stat_frame, font=FONT, bg="#fdf6e3", width=6)
+    stat_num_labels[key] = tk.Label(stat_frame, font=FONT, bg=BG_COLOR, width=6)
     stat_num_labels[key].grid(row=row, column=2)
     row += 1
 
 # 상태창
-status_box = tk.LabelFrame(root, text=" 상태창 ", font=FONT_BOLD, bg="#fdf6e3", padx=8, pady=6)
+status_box = tk.LabelFrame(root, text=" 상태창 ", font=FONT_BOLD, bg=BG_COLOR, padx=8, pady=6)
 status_box.pack(fill="x", padx=20, pady=6)
-status_frame = tk.Frame(status_box, bg="#fdf6e3", height=34)
+status_frame = tk.Frame(status_box, bg=BG_COLOR, height=34)
 status_frame.pack(fill="x")
 tk.Label(status_box, text="상태에 마우스를 올려보세요.", font=("Malgun Gothic", 9),
-         bg="#fdf6e3", fg="gray").pack(anchor="w")
+         bg=BG_COLOR, fg=GUIDE_COLOR).pack(anchor="w")
 
 # 직전 선택의 결과 문장
-result_label = tk.Label(root, font=FONT, bg="#fdf6e3", fg="#7a5c2e", wraplength=500,
+result_label = tk.Label(root, font=FONT, bg=BG_COLOR, fg=TEXT_COLOR, wraplength=500,
                         justify="left", height=4, anchor="nw")
 result_label.pack(fill="x", padx=24, pady=(4, 0))
 
 # 선택지 영역
-choice_frame = tk.Frame(root, bg="#fffdf5", highlightthickness=1)
+choice_frame = tk.Frame(root, bg=PANEL_COLOR, highlightthickness=1)
 choice_frame.pack(fill="both", expand=True, padx=20, pady=(4, 16))
-prompt_label = tk.Label(choice_frame, font=FONT, bg="#fffdf5", wraplength=480, justify="left")
+prompt_label = tk.Label(choice_frame, font=FONT, bg=PANEL_COLOR, wraplength=480, justify="left")
 prompt_label.pack(padx=14, pady=(14, 8), anchor="w")
 
-button_frame = tk.Frame(choice_frame, bg="#fffdf5")
+button_frame = tk.Frame(choice_frame, bg=PANEL_COLOR)
 button_frame.pack(fill="x", padx=14, pady=(0, 12))
 
 # 선택지 버튼 3개 (선택지가 2개면 3번째 버튼은 숨겨짐)
 buttons = []
 for i in range(3):
     button = tk.Button(button_frame, font=FONT, wraplength=440, justify="left",
-                       anchor="w", bg="#f6e7c8", padx=8, pady=6)
+                       anchor="w", bg=BUTTON_COLOR, padx=8, pady=6)
     buttons.append(button)
 
 

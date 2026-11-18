@@ -17,6 +17,31 @@ MAX_AGE = 10  # 이 나이에 도달하면 게임 종료(엔딩)
 INITIAL_STATS = {"health": 7, "happiness": 5, "intimacy": 3}
 
 # ---------------------------------------------------------------------------
+# 강아지 이미지 (images 폴더의 PNG 파일 이름, .png 는 뺀 것)
+# ---------------------------------------------------------------------------
+IMAGE_NAMES = [
+    "puppy", "normal", "senior",                              # 나이별 기본 모습
+    "happy", "sad", "sick", "hungry", "full", "excited",      # 상황별 모습
+    "injured", "depressed",
+    "ending_good", "ending_angel", "ending_lonely",           # 엔딩 모습
+]
+
+# 엔딩 키 -> 엔딩 때 보여줄 이미지
+ENDING_IMAGES = {
+    "sick": "ending_angel",
+    "runaway": "ending_lonely",
+    "strayed": "ending_lonely",
+    "heatstroke": "ending_angel",
+    "poison": "ending_angel",
+    "natural_warm": "ending_angel",
+    "natural_lonely": "ending_angel",
+    "bond": "ending_good",
+    "joyful": "ending_good",
+    "healthy": "ending_good",
+    "ordinary": "ending_good",
+}
+
+# ---------------------------------------------------------------------------
 # 상태창에 표시되는 세부 상태
 #   per_turn   : 매 턴마다 적용되는 스테이터스 변화 (+1이면 증가, -1이면 감소)
 #   flavor     : 마우스 오버 시 보여줄 설명 문장

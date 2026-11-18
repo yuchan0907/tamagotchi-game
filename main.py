@@ -6,12 +6,20 @@
 게임 규칙은 game_logic.py, 게임 내용(선택지 등)은 data.py 에 있습니다.
 """
 
+import os
 import tkinter as tk
 from tkinter import scrolledtext
 
 import game_logic
 from game_logic import game
-from data import ENDINGS, MAX_AGE, STAT_MAX, STAT_NAMES
+from data import ENDINGS, IMAGE_NAMES, MAX_AGE, STAT_MAX, STAT_NAMES
+
+# images 폴더 위치 (어느 폴더에서 실행해도 찾을 수 있게 이 파일 기준으로 계산)
+IMAGE_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "images")
+
+# 불러온 이미지를 저장해 두는 딕셔너리 {"happy": 그림, ...}
+# (딕셔너리에 계속 들고 있어야 tkinter가 그림을 화면에서 지우지 않습니다)
+images = {}
 
 FONT = ("Malgun Gothic", 11)
 FONT_BOLD = ("Malgun Gothic", 11, "bold")
@@ -82,32 +90,9 @@ def hide_tooltip(event):
 # 3. 화면 그리기
 # ======================================================================
 def draw_pet():
-    """캔버스에 강아지를 그린다. 행복도/건강에 따라 표정이 바뀐다."""
-    canvas.delete("all")
-    happiness = game["stats"]["happiness"]
-    sick = game["stats"]["health"] <= 3 or "감기" in game["statuses"]
-
-    if sick:
-        fur = "#c9b79b"     # 아프면 털 색이 칙칙해짐
-    else:
-        fur = "#d9a66b"
-    dark = "#8a5a2b"
-
-    canvas.create_oval(60, 95, 165, 160, fill=fur, outline=dark, width=2)    # 몸
-    canvas.create_oval(55, 25, 90, 75, fill=dark, outline=dark)              # 왼쪽 귀
-    canvas.create_oval(130, 25, 165, 75, fill=dark, outline=dark)            # 오른쪽 귀
-    canvas.create_oval(65, 30, 155, 110, fill=fur, outline=dark, width=2)    # 얼굴
-    canvas.create_oval(88, 60, 100, 74, fill="black")                        # 왼쪽 눈
-    canvas.create_oval(120, 60, 132, 74, fill="black")                       # 오른쪽 눈
-    canvas.create_oval(103, 78, 117, 90, fill="black")                       # 코
-
-    # 입 모양: 행복도에 따라 웃는 입 / 일자 입 / 슬픈 입
-    if happiness >= 7:
-        canvas.create_arc(95, 82, 125, 104, start=200, extent=140, style="arc", width=2)
-    elif happiness >= 4:
-        canvas.create_line(100, 98, 120, 98, width=2)
-    else:
-        canvas.create_arc(95, 96, 125, 116, start=20, extent=140, style="arc", width=2)
+    """지금 상황에 맞는 강아지 이미지(images 폴더의 PNG)를 화면에 보여준다."""
+    name = game_logic.pet_image_name()     # 어떤 그림을 쓸지는 game_logic.py가 정해 준다
+    pet_label.config(image=images[name])
 
 
 def draw_stat_bars():
@@ -216,9 +201,13 @@ root.configure(bg="#fdf6e3")
 header_label = tk.Label(root, font=FONT_BIG, bg="#fdf6e3")
 header_label.pack(pady=(14, 4))
 
-# 강아지 그림
-canvas = tk.Canvas(root, width=220, height=170, bg="#fffdf5")
-canvas.pack(pady=4)
+# images 폴더의 PNG 파일을 모두 불러온다 (창을 만든 뒤에 해야 함)
+for image_name in IMAGE_NAMES:
+    images[image_name] = tk.PhotoImage(file=os.path.join(IMAGE_FOLDER, image_name + ".png"))
+
+# 강아지 그림이 표시될 자리
+pet_label = tk.Label(root, bg="#fdf6e3")
+pet_label.pack(pady=4)
 
 # 스테이터스 바 (건강 / 행복 / 친밀도)
 stat_frame = tk.Frame(root, bg="#fdf6e3")

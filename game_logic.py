@@ -13,7 +13,8 @@
 import random
 
 from data import (
-    CHOICES, ENDINGS, INITIAL_STATS, MAX_AGE, SEASONS, STAT_MAX, STAT_NAMES, STATUSES,
+    CHOICES, ENDING_IMAGES, ENDINGS, INITIAL_STATS, MAX_AGE, SEASONS, STAT_MAX,
+    STAT_NAMES, STATUSES,
 )
 
 # 게임의 현재 상태를 담는 딕셔너리 (new_game()을 부르면 채워집니다)
@@ -73,6 +74,49 @@ def status_description(name):
     lines.append("")
     lines.append(f"남은 턴 수 : {game['statuses'][name]}")
     return "\n".join(lines)
+
+
+def pet_image_name():
+    """지금 상황에 맞는 강아지 이미지 이름을 돌려준다. (images 폴더의 파일 이름)
+
+    위에 있는 조건일수록 우선순위가 높습니다.
+    새 상태를 추가했다면 여기에 한 줄을 추가해서 이미지를 연결하세요.
+    """
+    # 엔딩이 났다면 엔딩 이미지
+    if game["ending"] != "":
+        return ENDING_IMAGES[game["ending"]]
+
+    statuses = game["statuses"]
+    stats = game["stats"]
+
+    # 상태창에 있는 상태가 우선
+    if "부상" in statuses:
+        return "injured"
+    if "감기" in statuses:
+        return "sick"
+    if "우울" in statuses:
+        return "depressed"
+    if "배고픔" in statuses:
+        return "hungry"
+    if "신남" in statuses:
+        return "excited"
+    if "배부름" in statuses:
+        return "full"
+
+    # 그다음은 스테이터스
+    if stats["health"] <= 3:
+        return "sick"
+    if stats["happiness"] <= 3:
+        return "sad"
+    if stats["happiness"] >= 7:
+        return "happy"
+
+    # 아무 일도 없으면 나이에 맞는 기본 모습
+    if game["age"] <= 1:
+        return "puppy"
+    if game["age"] >= 7:
+        return "senior"
+    return "normal"
 
 
 # ----------------------------------------------------------------------

@@ -4,11 +4,15 @@
 (화면(tkinter)은 필요 없습니다. 게임을 여러 번 자동으로 플레이해 봅니다.)
 """
 
+import os
 import random
+import struct
 
 import game_logic
 from game_logic import game
-from data import CHOICES, ENDINGS, STAT_MAX, STATUSES
+from data import CHOICES, ENDING_IMAGES, ENDINGS, IMAGE_NAMES, STAT_MAX, STATUSES
+
+IMAGE_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "images")
 
 
 def test_data():
@@ -33,6 +37,27 @@ def test_data():
     print("data.py 검사 통과")
 
 
+def test_images():
+    """이미지 파일이 모두 있고, PNG 파일이며, 크기가 160x160인지 검사한다."""
+    for name in IMAGE_NAMES:
+        path = os.path.join(IMAGE_FOLDER, name + ".png")
+        assert os.path.exists(path), f"images/{name}.png 파일이 없습니다"
+        with open(path, "rb") as f:
+            header = f.read(24)
+        assert header[:8] == b"\x89PNG\r\n\x1a\n", f"{name}.png 는 PNG 파일이 아닙니다"
+        width, height = struct.unpack(">II", header[16:24])
+        assert (width, height) == (160, 160), f"{name}.png 크기가 {width}x{height} 입니다"
+
+    for key in ENDINGS:
+        assert key in ENDING_IMAGES, f"ENDING_IMAGES에 '{key}' 엔딩이 없습니다"
+        assert ENDING_IMAGES[key] in IMAGE_NAMES, f"'{key}' 엔딩의 이미지 이름이 없습니다"
+    print("이미지 검사 통과")
+
+
+# 플레이 중에 실제로 사용된 이미지 이름들
+used_images = set()
+
+
 def play_one_game():
     """무작위로 선택지를 골라 엔딩까지 한 판 플레이한다."""
     game_logic.new_game()
@@ -44,6 +69,10 @@ def play_one_game():
         # 스테이터스는 항상 0~10 이어야 한다
         for value in game["stats"].values():
             assert 0 <= value <= STAT_MAX
+
+        # 어떤 상황에서도 존재하는 이미지 이름이 나와야 한다
+        used_images.add(game_logic.pet_image_name())
+        assert game_logic.pet_image_name() in IMAGE_NAMES
 
         count += 1
         assert count < 500, "끝나지 않는 게임?"
@@ -72,6 +101,8 @@ def test_vaccine():
 
 
 test_data()
+test_images()
 test_play()
+print("플레이 중 사용된 이미지:", sorted(used_images))
 test_vaccine()
 print("모든 테스트 통과!")

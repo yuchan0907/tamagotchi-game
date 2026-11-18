@@ -19,18 +19,38 @@ python test_logic.py  # 게임 규칙 자동 테스트 (화면 없이 2000판 �
 | 상태창 | 배부름·감기 등 키워드 상태, 마우스를 올리면 효과·남은 턴 표시 | `data.py` → `STATUSES`, `main.py` → `show_tooltip()` |
 | 선택지 | 매 턴 무작위 선택지 + 나이 고정 / 상태 조건 / 계절 선택지 | `data.py` → `CHOICES`, `game_logic.py` → `pick_next_choice()` |
 | 나이 / 계절 | 선택할 때마다 계절이 바뀌고, 한 바퀴 돌면 1살 | `game_logic.py` → `advance_season()` |
-| 다마고치 | 캔버스로 그린 강아지 (행복·건강에 따라 표정 변화) | `main.py` → `draw_pet()` |
+| 다마고치 | 도트 그래픽 강아지 이미지 14장, 상황에 맞게 자동 교체 | `images/`, `game_logic.py` → `pet_image_name()` |
 | 엔딩 | 스테이터스 0 / 잘못된 선택 / 자연사(7살~) / 10살 도달, 선택 기록 돌아보기 | `data.py` → `ENDINGS` |
 
 ---
 
-## 파일은 3개로 나뉘어 있어요
+## 강아지 이미지 (도트 그래픽)
+
+![강아지 이미지 모음](images/preview.png)
+
+위 순서대로 `puppy` `normal` `senior` `happy` `sad` `sick` `hungry` / `full` `excited` `injured` `depressed` `ending_good` `ending_angel` `ending_lonely` 입니다.
+(32x32 도트를 5배 확대한 160x160 PNG)
+
+게임은 상황에 따라 아래 규칙으로 이미지를 고릅니다. (위에 있는 것이 우선)
+
+| 조건 | 이미지 |
+| --- | --- |
+| 엔딩이 남 | `ending_good`(좋은 엔딩) / `ending_angel`(떠남) / `ending_lonely`(가출·소원해짐) |
+| 상태 `부상` / `감기` / `우울` | `injured` / `sick` / `depressed` |
+| 상태 `배고픔` / `신남` / `배부름` | `hungry` / `excited` / `full` |
+| 건강 3 이하 | `sick` |
+| 행복 3 이하 / 7 이상 | `sad` / `happy` |
+| 아무 일 없음 | 0~1살 `puppy`, 2~6살 `normal`, 7살 이상 `senior` |
+
+## 파일 구성
 
 ```
-data.py        게임 "내용" (선택지, 상태, 엔딩 글)   ← 내용을 바꿀 땐 여기만!
-game_logic.py  게임 "규칙" (턴 진행, 계절, 엔딩 판정)
-main.py        "화면" (tkinter로 그리기, 버튼)
-test_logic.py  자동 테스트
+data.py          게임 "내용" (선택지, 상태, 엔딩 글, 이미지 목록)   ← 내용을 바꿀 땐 여기만!
+game_logic.py    게임 "규칙" (턴 진행, 계절, 엔딩 판정, 이미지 고르기)
+main.py          "화면" (tkinter로 그리기, 버튼)
+test_logic.py    자동 테스트
+images/          강아지 도트 이미지 (PNG)
+tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요 없음)
 ```
 
 ### 코드는 이 순서로 읽으면 쉬워요
@@ -43,6 +63,7 @@ test_logic.py  자동 테스트
 
 - **클래스를 쓰지 않았습니다.** 함수 + 딕셔너리(`game`)만 사용합니다. 게임의 현재 상태는 `game` 딕셔너리 하나에 다 들어 있습니다.
 - **람다(`lambda`), 컴프리헨션, 타입 힌트 같은 문법을 쓰지 않았습니다.** `for`, `if`, 함수, 딕셔너리, 리스트만 사용합니다.
+- **강아지는 이미지 파일(PNG)** 로 보여주고, 어떤 이미지를 쓸지는 `pet_image_name()` 한 함수에서 `if`문으로만 정합니다.
 - **버튼은 3개로 고정**하고, 선택지 개수만큼만 보이게 했습니다. 버튼마다 함수(`click_1`, `click_2`, `click_3`)가 따로 있습니다.
 - **내용(data.py)과 규칙(game_logic.py)과 화면(main.py)을 분리**해서, 선택지를 추가할 때 화면 코드를 건드릴 필요가 없습니다.
 - 모든 파일에 한국어 주석을 달았습니다.
@@ -125,7 +146,24 @@ test_logic.py  자동 테스트
 | 10살 엔딩 조건 | `game_logic.py` → `final_ending()` |
 | 글꼴 / 창 크기 | `main.py` 맨 위 `FONT...`, `root.geometry(...)` |
 
-### 5. 수정한 뒤에는 꼭 테스트
+### 5. 이미지 바꾸기 / 추가하기
+
+**이미지 한 장 바꾸기** : `images/` 폴더에 같은 이름(예: `happy.png`)으로 덮어쓰면 됩니다. 크기는 **160x160 PNG**로 맞춰 주세요. (테스트가 크기를 검사합니다)
+
+**새 이미지 추가하기** (예: 졸린 모습 `sleepy`)
+
+1. `images/sleepy.png` 파일을 넣는다.
+2. `data.py`의 `IMAGE_NAMES` 목록에 `"sleepy"`를 추가한다.
+3. `game_logic.py`의 `pet_image_name()` 함수에 조건을 한 줄 추가한다.
+
+```python
+    if "졸림" in statuses:
+        return "sleepy"
+```
+
+**이미지를 코드로 다시 만들기** : `python tools/make_images.py`를 실행하면 `images/`의 PNG가 모두 다시 만들어집니다. `tools/make_images.py`의 `SPECS`에 표정 설명(눈, 입, 꼬리, 장식)을 한 줄 추가하면 새 이미지를 만들 수 있습니다. (⚠️ 직접 그려서 덮어쓴 이미지는 다시 실행하면 원래대로 돌아갑니다)
+
+### 6. 수정한 뒤에는 꼭 테스트
 
 ```bash
 python test_logic.py
@@ -133,13 +171,14 @@ python test_logic.py
 
 `data.py`에 오타가 있으면(없는 상태 이름, 선택지 id 중복, 답변 4개 이상 등) 테스트가 어디가 틀렸는지 알려줍니다. 통과하면 `python main.py`로 실제 화면도 확인하세요.
 
-### 6. 자주 나는 오류
+### 7. 자주 나는 오류
 
 | 오류 | 원인 |
 | --- | --- |
 | `SyntaxError` | 쉼표(`,`), 따옴표(`"`), 괄호 빼먹음 |
 | `KeyError: '...'` | 없는 상태 이름 / 스테이터스 이름 오타 (`happiness`, `health`, `intimacy`만 가능) |
 | `IndexError` | 답변을 4개 이상 넣음 (버튼이 3개) |
+| `_tkinter.TclError: couldn't open "...png"` | 이미지 파일이 없거나 `IMAGE_NAMES`의 이름과 파일 이름이 다름 |
 | 한글이 깨져 보임 | 글꼴이 없는 컴퓨터 → `main.py` 맨 위 `"Malgun Gothic"`을 다른 글꼴로 변경 |
 
 ---

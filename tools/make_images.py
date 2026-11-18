@@ -1,12 +1,12 @@
 """도트 강아지 이미지(images/*.png)를 만드는 도구 파일.
 
-게임을 실행하는 데는 필요 없습니다. (이미 만들어진 PNG 파일을 게임이 불러다 씁니다)
-이미지를 다시 만들거나 새 표정을 추가하고 싶을 때만 실행하세요.
+게임 실행에는 필요하지 않음. (이미 만들어진 PNG 파일을 게임이 불러와 사용함)
+이미지를 다시 만들거나 새 표정을 추가할 때만 실행함.
 
     python tools/make_images.py
 
-32x32 칸짜리 도트 그림을 그린 뒤, 5배로 키워서 160x160 PNG로 저장합니다.
-외부 패키지 없이 파이썬 기본 기능만 사용합니다.
+32x32 칸짜리 도트 그림을 그린 뒤 5배로 확대하여 160x160 PNG로 저장함.
+외부 패키지 없이 파이썬 기본 기능만 사용함.
 """
 
 import os
@@ -14,7 +14,7 @@ import struct
 import zlib
 
 SIZE = 32       # 도트 칸 수 (32 x 32)
-SCALE = 5       # 저장할 때 확대 배율 (32 * 5 = 160px)
+SCALE = 5       # 저장 시 확대 배율 (32 * 5 = 160px)
 
 # ---------------------------------------------------------------- 색깔
 OUT = "#4a2f17"        # 테두리
@@ -40,13 +40,13 @@ def new_grid():
 
 
 def put(grid, x, y, color):
-    """(x, y) 칸 하나에 색을 칠한다. 그림 밖이면 무시."""
+    """(x, y) 칸 하나에 색을 칠함. 그림 밖이면 무시됨."""
     if 0 <= x < SIZE and 0 <= y < SIZE:
         grid[y][x] = color
 
 
 def sym(grid, points, color):
-    """점들을 칠하고, 좌우 대칭 위치에도 똑같이 칠한다."""
+    """점들을 칠하고 좌우 대칭 위치에도 똑같이 칠함."""
     for x, y in points:
         put(grid, x, y, color)
         put(grid, SIZE - 1 - x, y, color)
@@ -59,7 +59,7 @@ def rect(grid, x0, y0, x1, y1, color):
 
 
 def ellipse(grid, cx, cy, rx, ry, color):
-    """중심 (cx, cy), 가로 반지름 rx, 세로 반지름 ry 인 타원을 채운다."""
+    """중심 (cx, cy), 가로 반지름 rx, 세로 반지름 ry 인 타원을 채움."""
     for y in range(SIZE):
         for x in range(SIZE):
             if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1:
@@ -67,7 +67,7 @@ def ellipse(grid, cx, cy, rx, ry, color):
 
 
 def outline(grid, color):
-    """그려진 칸과 맞닿은 빈 칸에 테두리를 칠한다."""
+    """그려진 칸과 맞닿은 빈 칸에 테두리를 칠함."""
     marks = []
     for y in range(SIZE):
         for x in range(SIZE):
@@ -84,7 +84,7 @@ def outline(grid, color):
 
 
 def draw_pattern(grid, x, y, rows, color):
-    """문자열 도안('1'인 칸만 칠함)을 (x, y) 위치에 그린다."""
+    """문자열 도안('1'인 칸만 칠함)을 (x, y) 위치에 그림."""
     for row_index in range(len(rows)):
         for col_index in range(len(rows[row_index])):
             if rows[row_index][col_index] == "1":
@@ -218,13 +218,13 @@ def draw_mouth(grid, kind, dy):
 
 # ---------------------------------------------------------------- 한 장 그리기
 def build(spec):
-    """spec(설명 딕셔너리)대로 32x32 도트 그림을 만들어 돌려준다."""
+    """spec(설명 딕셔너리) 기준으로 32x32 도트 그림을 만들어 반환함."""
     grid = new_grid()
     puppy = spec.get("puppy", False)
     dy = 2 if puppy else 0
     fur = spec.get("fur", FUR)
 
-    # 1단계: 몸 (테두리가 둘러지는 부분)
+    # 1단계: 몸 (테두리가 적용되는 부분)
     if spec.get("wings"):
         ellipse(grid, 6, 22, 3.5, 5, WHITE)
         ellipse(grid, 25, 22, 3.5, 5, WHITE)
@@ -283,7 +283,7 @@ def build(spec):
 
 
 # ---------------------------------------------------------------- 이미지 목록
-# 새 표정을 추가하려면 여기에 한 줄 추가하면 됩니다.
+# 새 표정 추가 시 여기에 한 줄 추가하면 됨.
 SPECS = {
     # --- 나이에 따른 기본 모습 ---
     "puppy": {"puppy": True, "eyes": "open", "mouth": "smile", "tail": "up"},
@@ -330,7 +330,7 @@ def chunk(kind, data):
 
 
 def write_png(path, grid, scale, background=None):
-    """도트 그림을 scale배로 키워서 PNG 파일로 저장한다. (background가 있으면 배경을 채움)"""
+    """도트 그림을 scale배로 확대하여 PNG 파일로 저장함. (background가 있으면 배경을 채움)"""
     width = len(grid[0]) * scale
     height = len(grid) * scale
     raw = bytearray()
@@ -351,7 +351,7 @@ def write_png(path, grid, scale, background=None):
 
 
 def make_preview(path, grids, columns=7):
-    """모든 이미지를 한 장에 모은 미리보기(README용)를 만든다."""
+    """모든 이미지를 한 장에 모은 미리보기(README용)를 만듦."""
     cell = SIZE + 2
     rows = (len(grids) + columns - 1) // columns
     sheet = [[BG] * (cell * columns) for _ in range(cell * rows)]
@@ -374,10 +374,10 @@ def main():
         grid = build(SPECS[name])
         grids.append(grid)
         write_png(os.path.join(folder, name + ".png"), grid, SCALE)
-        print("만듦:", name + ".png")
+        print("생성 완료:", name + ".png")
 
     make_preview(os.path.join(folder, "preview.png"), grids)
-    print("만듦: preview.png (이미지 모음 미리보기)")
+    print("생성 완료: preview.png (이미지 모음 미리보기)")
 
 
 if __name__ == "__main__":

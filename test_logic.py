@@ -1,7 +1,7 @@
-"""게임 규칙이 오류 없이 돌아가는지 확인하는 테스트 파일.
+"""게임 규칙이 오류 없이 동작하는지 확인하는 테스트 파일임.
 
 실행 방법:  python test_logic.py
-(화면(tkinter)은 필요 없습니다. 게임을 여러 번 자동으로 플레이해 봅니다.)
+(화면(tkinter) 불필요. 게임을 여러 번 자동 플레이하여 확인함.)
 """
 
 import os
@@ -16,7 +16,7 @@ IMAGE_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "images"
 
 
 def test_data():
-    """data.py에 오타가 없는지 검사한다."""
+    """data.py에 오타가 없는지 검사함."""
     ids = []
     for choice in CHOICES:
         ids.append(choice["id"])
@@ -33,49 +33,49 @@ def test_data():
             if "ending" in option:
                 assert option["ending"] in ENDINGS, f"{choice['id']}: 없는 엔딩"
 
-    assert len(ids) == len(set(ids)), "선택지 id가 겹칩니다"
+    assert len(ids) == len(set(ids)), "선택지 id 중복됨"
     print("data.py 검사 통과")
 
 
 def test_images():
-    """이미지 파일이 모두 있고, PNG 파일이며, 크기가 160x160인지 검사한다."""
+    """이미지 파일의 존재 여부, PNG 형식, 160x160 크기를 검사함."""
     for name in IMAGE_NAMES:
         path = os.path.join(IMAGE_FOLDER, name + ".png")
-        assert os.path.exists(path), f"images/{name}.png 파일이 없습니다"
+        assert os.path.exists(path), f"images/{name}.png 파일 없음"
         with open(path, "rb") as f:
             header = f.read(24)
-        assert header[:8] == b"\x89PNG\r\n\x1a\n", f"{name}.png 는 PNG 파일이 아닙니다"
+        assert header[:8] == b"\x89PNG\r\n\x1a\n", f"{name}.png  PNG 형식이 아님"
         width, height = struct.unpack(">II", header[16:24])
-        assert (width, height) == (160, 160), f"{name}.png 크기가 {width}x{height} 입니다"
+        assert (width, height) == (160, 160), f"{name}.png 크기 오류 ({width}x{height})"
 
     for key in ENDINGS:
-        assert key in ENDING_IMAGES, f"ENDING_IMAGES에 '{key}' 엔딩이 없습니다"
-        assert ENDING_IMAGES[key] in IMAGE_NAMES, f"'{key}' 엔딩의 이미지 이름이 없습니다"
+        assert key in ENDING_IMAGES, f"ENDING_IMAGES에 '{key}' 엔딩 누락됨"
+        assert ENDING_IMAGES[key] in IMAGE_NAMES, f"'{key}' 엔딩의 이미지 이름 누락됨"
     print("이미지 검사 통과")
 
 
-# 플레이 중에 실제로 사용된 이미지 이름들
+# 플레이 중 실제로 사용된 이미지 이름 목록
 used_images = set()
 
 
 def play_one_game():
-    """무작위로 선택지를 골라 엔딩까지 한 판 플레이한다."""
+    """무작위로 선택지를 골라 엔딩까지 한 판 플레이함."""
     game_logic.new_game()
     count = 0
     while game["ending"] == "":
         number_of_options = len(game["choice"]["options"])
         game_logic.choose(random.randrange(number_of_options))
 
-        # 스테이터스는 항상 0~10 이어야 한다
+        # 스테이터스는 항상 0~10 범위여야 함
         for value in game["stats"].values():
             assert 0 <= value <= STAT_MAX
 
-        # 어떤 상황에서도 존재하는 이미지 이름이 나와야 한다
+        # 어떤 상황에서도 존재하는 이미지 이름이 반환되어야 함
         used_images.add(game_logic.pet_image_name())
         assert game_logic.pet_image_name() in IMAGE_NAMES
 
         count += 1
-        assert count < 500, "끝나지 않는 게임?"
+        assert count < 500, "게임이 끝나지 않음"
     return game["ending"]
 
 
@@ -91,7 +91,7 @@ def test_play():
 
 
 def test_vaccine():
-    """예방접종 상태에서는 감기에 안 걸려야 한다."""
+    """예방접종 상태에서는 감기에 걸리지 않아야 함."""
     game_logic.new_game()
     game["statuses"]["예방접종"] = 5
     log = []

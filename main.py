@@ -2,8 +2,8 @@
 
 실행 방법:  python main.py
 
-이 파일은 "화면에 보여주기"만 담당합니다.
-게임 규칙은 game_logic.py, 게임 내용(선택지 등)은 data.py 에 있습니다.
+이 파일은 "화면 표시"만 담당함.
+게임 규칙은 game_logic.py, 게임 내용(선택지 등)은 data.py 에 있음.
 """
 
 import os
@@ -14,19 +14,19 @@ import game_logic
 from game_logic import game
 from data import ENDINGS, IMAGE_NAMES, MAX_AGE, STAT_MAX, STAT_NAMES
 
-# images 폴더 위치 (어느 폴더에서 실행해도 찾을 수 있게 이 파일 기준으로 계산)
+# images 폴더 위치 (어느 폴더에서 실행해도 찾을 수 있도록 이 파일 기준으로 계산함)
 IMAGE_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "images")
 
-# 불러온 이미지를 저장해 두는 딕셔너리 {"happy": 그림, ...}
-# (딕셔너리에 계속 들고 있어야 tkinter가 그림을 화면에서 지우지 않습니다)
+# 불러온 이미지를 저장하는 딕셔너리 {"happy": 그림, ...}
+# (딕셔너리에 계속 보관해야 tkinter가 그림을 화면에서 지우지 않음)
 images = {}
 
 FONT = ("Malgun Gothic", 11)
 FONT_BOLD = ("Malgun Gothic", 11, "bold")
 FONT_BIG = ("Malgun Gothic", 16, "bold")
 
-# 색깔 설정: "#fdf6e3" 같은 숫자 코드 대신 brown, wheat 처럼 이름으로 씁니다.
-# 색을 바꾸고 싶으면 여기 이름만 바꾸면 화면 전체에 적용됩니다.
+# 색깔 설정: "#fdf6e3" 같은 숫자 코드 대신 brown, wheat 같은 이름으로 지정함.
+# 색 변경 시 여기 이름만 바꾸면 화면 전체에 적용됨.
 # 사용할 수 있는 색 이름 목록: https://www.tcl.tk/man/tcl8.6/TkCmd/colors.htm
 BG_COLOR = "oldlace"          # 전체 배경 (크림색)
 PANEL_COLOR = "floralwhite"   # 선택지가 나오는 칸의 배경
@@ -35,7 +35,7 @@ TIP_COLOR = "lightyellow"     # 마우스 오버 설명 창
 TEXT_COLOR = "saddlebrown"    # 선택 결과 문장 글자색
 GUIDE_COLOR = "gray"          # 안내 문구 글자색
 
-# 툴팁(마우스 오버 설명 창)을 저장해 두는 리스트. 창이 하나만 뜨게 관리한다.
+# 툴팁(마우스 오버 설명 창)을 저장하는 리스트. 창이 하나만 뜨도록 관리함.
 tooltip_windows = []
 
 
@@ -55,7 +55,7 @@ def click_3():
 
 
 def play_turn(index):
-    """index번째 선택지를 골라 한 턴 진행하고 화면을 새로 그린다."""
+    """index번째 선택지를 골라 한 턴 진행한 뒤 화면을 새로 그림."""
     result = game_logic.choose(index)
 
     lines = []
@@ -100,13 +100,13 @@ def hide_tooltip(event):
 # 3. 화면 그리기
 # ======================================================================
 def draw_pet():
-    """지금 상황에 맞는 강아지 이미지(images 폴더의 PNG)를 화면에 보여준다."""
-    name = game_logic.pet_image_name()     # 어떤 그림을 쓸지는 game_logic.py가 정해 준다
+    """지금 상황에 맞는 강아지 이미지(images 폴더의 PNG)를 화면에 표시함."""
+    name = game_logic.pet_image_name()     # 사용할 그림은 game_logic.py에서 결정함
     pet_label.config(image=images[name])
 
 
 def draw_stat_bars():
-    """■■■■□□□□□□ 7/10 모양의 스테이터스 바를 그린다."""
+    """■■■■□□□□□□ 7/10 모양의 스테이터스 바를 그림."""
     for key in STAT_NAMES:
         value = game["stats"][key]
         bar = "■" * value + "□" * (STAT_MAX - value)
@@ -114,7 +114,7 @@ def draw_stat_bars():
 
 
 def draw_status_window():
-    """상태창: 가지고 있는 상태를 작은 라벨로 나열한다."""
+    """상태창: 보유한 상태를 작은 라벨로 나열함."""
     # 이전에 그렸던 라벨 지우기
     for widget in status_frame.winfo_children():
         widget.destroy()
@@ -127,12 +127,12 @@ def draw_status_window():
         label = tk.Label(status_frame, text=name, font=FONT_BOLD,
                          bg=BUTTON_COLOR, relief="ridge", padx=8, pady=2)
         label.pack(side="left", padx=3)
-        label.bind("<Enter>", show_tooltip)     # 마우스를 올리면
-        label.bind("<Leave>", hide_tooltip)     # 마우스를 내리면
+        label.bind("<Enter>", show_tooltip)     # 마우스를 올렸을 때 실행
+        label.bind("<Leave>", hide_tooltip)     # 마우스를 내렸을 때 실행
 
 
 def refresh():
-    """화면 전체를 현재 game 상태에 맞게 다시 그린다."""
+    """화면 전체를 현재 game 상태에 맞게 다시 그림."""
     header_label.config(
         text=f"{game_logic.season_name()}  ·  {game['age']}살 / {MAX_AGE}살  ·  {game['turn']}턴")
     draw_pet()
@@ -146,14 +146,14 @@ def refresh():
 
 
 def show_choice():
-    """선택지 문장과 버튼을 보여준다."""
+    """선택지 문장과 버튼을 표시함."""
     choice = game["choice"]
     prompt_label.config(text="* " + choice["prompt"])
 
     options = choice["options"]
     click_functions = [click_1, click_2, click_3]
 
-    # 버튼 3개를 일단 모두 숨긴 뒤, 필요한 개수만 다시 보여준다
+    # 버튼 3개를 모두 숨긴 뒤 필요한 개수만 다시 표시함
     for button in buttons:
         button.pack_forget()
     for i in range(len(options)):
@@ -162,7 +162,7 @@ def show_choice():
 
 
 def show_ending():
-    """엔딩 문장과 버튼(돌아보기 / 새로 시작)을 보여준다."""
+    """엔딩 문장과 버튼(돌아보기 / 새로 시작)을 표시함."""
     info = ENDINGS[game["ending"]]
     if info["good"]:
         mark = "★"
@@ -179,7 +179,7 @@ def show_ending():
 
 
 def show_history():
-    """엔딩 후, 지금까지의 선택 기록을 새 창에 보여준다."""
+    """엔딩 후 지금까지의 선택 기록을 새 창에 표시함."""
     window = tk.Toplevel(root)
     window.title("다마고치와 함께한 선택들")
     window.geometry("520x560")
@@ -199,7 +199,7 @@ def show_history():
 
 
 # ======================================================================
-# 4. 화면 배치 (프로그램이 시작할 때 한 번만 실행)
+# 4. 화면 배치 (프로그램 시작 시 한 번만 실행됨)
 # ======================================================================
 root = tk.Tk()
 root.title("다마고치 키우기")
@@ -210,7 +210,7 @@ root.configure(bg=BG_COLOR)
 header_label = tk.Label(root, font=FONT_BIG, bg=BG_COLOR)
 header_label.pack(pady=(14, 4))
 
-# images 폴더의 PNG 파일을 모두 불러온다 (창을 만든 뒤에 해야 함)
+# images 폴더의 PNG 파일을 모두 불러옴 (창 생성 후에 실행해야 함)
 for image_name in IMAGE_NAMES:
     images[image_name] = tk.PhotoImage(file=os.path.join(IMAGE_FOLDER, image_name + ".png"))
 

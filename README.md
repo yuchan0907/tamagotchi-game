@@ -1,10 +1,10 @@
 # 🐶 tamagotchi-game
 
-강아지 다마고치를 키우는 턴제 선택형 게임입니다. (프로그래밍 기초 조별과제)
+강아지 다마고치를 키우는 턴제 선택형 게임임. (프로그래밍 기초 조별과제)
 
 ## 실행 방법
 
-Python 3.10 이상이 필요하고, 따로 설치할 패키지는 없습니다. (tkinter는 Python에 기본 포함)
+Python 3.10 이상 필요. 별도로 설치할 패키지는 없음. (tkinter는 Python에 기본 포함)
 
 ```bash
 python main.py        # 게임 실행 (Mac/리눅스는 python3, 윈도우는 py)
@@ -28,10 +28,10 @@ python test_logic.py  # 게임 규칙 자동 테스트 (화면 없이 2000판 �
 
 ![강아지 이미지 모음](images/preview.png)
 
-위 순서대로 `puppy` `normal` `senior` `happy` `sad` `sick` `hungry` / `full` `excited` `injured` `depressed` `ending_good` `ending_angel` `ending_lonely` 입니다.
+위 순서대로 `puppy` `normal` `senior` `happy` `sad` `sick` `hungry` / `full` `excited` `injured` `depressed` `ending_good` `ending_angel` `ending_lonely` 순서임.
 (32x32 도트를 5배 확대한 160x160 PNG)
 
-게임은 상황에 따라 아래 규칙으로 이미지를 고릅니다. (위에 있는 것이 우선)
+게임은 상황에 따라 아래 규칙으로 이미지를 선택함. (위에 있는 조건이 우선)
 
 | 조건 | 이미지 |
 | --- | --- |
@@ -53,20 +53,20 @@ images/          강아지 도트 이미지 (PNG)
 tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요 없음)
 ```
 
-### 코드는 이 순서로 읽으면 쉬워요
+### 코드 읽는 순서
 
-1. `data.py` : 딕셔너리와 리스트만 있습니다. 게임에 어떤 내용이 있는지 먼저 훑어보세요.
-2. `game_logic.py` : `choose()` 함수가 한 턴의 흐름입니다. 위에서 아래로 번호(1~6)를 따라 읽으세요.
-3. `main.py` : 맨 아래 "화면 배치" 부분 → 위의 `refresh()` 순서로 읽으세요.
+1. `data.py` : 딕셔너리와 리스트로만 구성됨. 게임 내용을 먼저 훑어보는 단계임.
+2. `game_logic.py` : `choose()` 함수가 한 턴의 흐름이 담겨 있음. 위에서 아래로 번호(1~6) 순서대로 읽음.
+3. `main.py` : 맨 아래 "화면 배치" 부분 → 위의 `refresh()` 순서로 읽음.
 
 ### 코드를 쉽게 만든 방법 (읽는 사람을 위한 설명)
 
-- **클래스를 쓰지 않았습니다.** 함수 + 딕셔너리(`game`)만 사용합니다. 게임의 현재 상태는 `game` 딕셔너리 하나에 다 들어 있습니다.
-- **람다(`lambda`), 컴프리헨션, 타입 힌트 같은 문법을 쓰지 않았습니다.** `for`, `if`, 함수, 딕셔너리, 리스트만 사용합니다.
-- **강아지는 이미지 파일(PNG)** 로 보여주고, 어떤 이미지를 쓸지는 `pet_image_name()` 한 함수에서 `if`문으로만 정합니다.
-- **버튼은 3개로 고정**하고, 선택지 개수만큼만 보이게 했습니다. 버튼마다 함수(`click_1`, `click_2`, `click_3`)가 따로 있습니다.
-- **내용(data.py)과 규칙(game_logic.py)과 화면(main.py)을 분리**해서, 선택지를 추가할 때 화면 코드를 건드릴 필요가 없습니다.
-- 모든 파일에 한국어 주석을 달았습니다.
+- **클래스 미사용.** 함수 + 딕셔너리(`game`)만 사용함. 게임의 현재 상태는 `game` 딕셔너리 하나에 모두 저장됨.
+- **람다(`lambda`), 컴프리헨션, 타입 힌트 미사용.** `for`, `if`, 함수, 딕셔너리, 리스트만 사용함.
+- **강아지는 이미지 파일(PNG)** 로 표시하며, 사용할 이미지는 `pet_image_name()` 한 함수에서 `if`문으로만 결정함.
+- **버튼은 3개로 고정**하고 선택지 개수만큼만 표시함. 버튼마다 함수(`click_1`, `click_2`, `click_3`)가 별도로 존재함.
+- **내용(data.py)과 규칙(game_logic.py)과 화면(main.py)을 분리**하여 선택지 추가 시 화면 코드를 수정할 필요가 없음.
+- 모든 파일에 한국어 주석을 작성함.
 
 ---
 
@@ -74,7 +74,7 @@ tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요
 
 ### 1. 선택지 추가하기 (가장 많이 하게 될 작업)
 
-`data.py`의 `CHOICES` 리스트 안에 아래 모양을 복사해서 추가합니다. **쉼표(`,`)를 빼먹지 마세요.**
+`data.py`의 `CHOICES` 리스트 안에 아래 모양을 복사하여 추가함. **쉼표(`,`) 누락 주의.**
 
 ```python
     {
@@ -92,7 +92,7 @@ tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요
     },
 ```
 
-등장 조건을 걸고 싶으면 선택지에 아래 항목을 **추가로** 넣으면 됩니다.
+등장 조건이 필요하면 선택지에 아래 항목을 **추가로** 넣음.
 
 | 항목 | 의미 | 예시 |
 | --- | --- | --- |
@@ -113,7 +113,7 @@ tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요
 
 ### 2. 상태 추가하기
 
-`data.py`의 `STATUSES` 안에 추가합니다.
+`data.py`의 `STATUSES` 안에 추가함.
 
 ```python
     "졸림": {
@@ -122,11 +122,11 @@ tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요
     },
 ```
 
-그다음 선택지의 `"add": {"졸림": 2}` 처럼 쓰면 됩니다.
+이후 선택지에서 `"add": {"졸림": 2}` 형태로 사용함.
 
 ### 3. 엔딩 추가하기
 
-`data.py`의 `ENDINGS` 안에 추가하고, 선택지의 `"ending": "키이름"` 으로 연결합니다.
+`data.py`의 `ENDINGS` 안에 추가한 뒤 선택지의 `"ending": "키이름"` 으로 연결함.
 
 ```python
     "my_ending": {
@@ -145,34 +145,34 @@ tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요
 | 자연사 확률 / 시작 나이 | `game_logic.py` → `advance_season()` |
 | 10살 엔딩 조건 | `game_logic.py` → `final_ending()` |
 | 글꼴 / 창 크기 | `main.py` 맨 위 `FONT...`, `root.geometry(...)` |
-| 화면 색깔 | `main.py` 맨 위 `BG_COLOR` 등. `"brown"`, `"wheat"`처럼 **색 이름**으로 씁니다 ([색 이름 목록](https://www.tcl.tk/man/tcl8.6/TkCmd/colors.htm)) |
+| 화면 색깔 | `main.py` 맨 위 `BG_COLOR` 등. `"brown"`, `"wheat"`처럼 **색 이름**으로 지정함 ([색 이름 목록](https://www.tcl.tk/man/tcl8.6/TkCmd/colors.htm)) |
 
 ### 5. 이미지 바꾸기 / 추가하기
 
-**이미지 한 장 바꾸기** : `images/` 폴더에 같은 이름(예: `happy.png`)으로 덮어쓰면 됩니다. 크기는 **160x160 PNG**로 맞춰 주세요. (테스트가 크기를 검사합니다)
+**이미지 한 장 바꾸기** : `images/` 폴더에 같은 이름(예: `happy.png`)으로 덮어씀. 크기는 **160x160 PNG**로 맞춰야 함. (테스트에서 크기를 검사함)
 
 **새 이미지 추가하기** (예: 졸린 모습 `sleepy`)
 
-1. `images/sleepy.png` 파일을 넣는다.
-2. `data.py`의 `IMAGE_NAMES` 목록에 `"sleepy"`를 추가한다.
-3. `game_logic.py`의 `pet_image_name()` 함수에 조건을 한 줄 추가한다.
+1. `images/sleepy.png` 파일을 넣음.
+2. `data.py`의 `IMAGE_NAMES` 목록에 `"sleepy"`를 추가함.
+3. `game_logic.py`의 `pet_image_name()` 함수에 조건을 한 줄 추가함.
 
 ```python
     if "졸림" in statuses:
         return "sleepy"
 ```
 
-**이미지를 코드로 다시 만들기** : `python tools/make_images.py`를 실행하면 `images/`의 PNG가 모두 다시 만들어집니다. `tools/make_images.py`의 `SPECS`에 표정 설명(눈, 입, 꼬리, 장식)을 한 줄 추가하면 새 이미지를 만들 수 있습니다. (⚠️ 직접 그려서 덮어쓴 이미지는 다시 실행하면 원래대로 돌아갑니다)
+**이미지를 코드로 다시 만들기** : `python tools/make_images.py`를 실행하면 `images/`의 PNG가 모두 다시 생성됨. `tools/make_images.py`의 `SPECS`에 표정 설명(눈, 입, 꼬리, 장식)을 한 줄 추가하면 새 이미지 생성 가능함. (⚠️ 직접 그려서 덮어쓴 이미지는 다시 실행하면 원래 이미지로 복구됨)
 
-### 6. 수정한 뒤에는 꼭 테스트
+### 6. 수정 후 테스트 진행
 
 ```bash
 python test_logic.py
 ```
 
-`data.py`에 오타가 있으면(없는 상태 이름, 선택지 id 중복, 답변 4개 이상 등) 테스트가 어디가 틀렸는지 알려줍니다. 통과하면 `python main.py`로 실제 화면도 확인하세요.
+`data.py`에 오타가 있으면(없는 상태 이름, 선택지 id 중복, 답변 4개 이상 등) 테스트에서 오류 위치를 알려줌. 통과 후 `python main.py`로 실제 화면도 확인함.
 
-### 7. 자주 나는 오류
+### 7. 자주 발생하는 오류
 
 | 오류 | 원인 |
 | --- | --- |
@@ -195,4 +195,4 @@ git commit -m "겨울 선택지 2개 추가"   # 4. 무엇을 했는지 적어�
 git push                        # 5. GitHub에 올리기
 ```
 
-팀원끼리 **같은 파일의 같은 부분**을 동시에 고치면 충돌이 납니다. 선택지는 `data.py`의 서로 다른 위치에 추가하거나, 작업할 부분을 미리 나누세요.
+팀원끼리 **같은 파일의 같은 부분**을 동시에 수정하면 충돌이 발생함. 선택지는 `data.py`의 서로 다른 위치에 추가하거나 작업 범위를 미리 나눠야 함.

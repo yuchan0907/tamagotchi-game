@@ -164,11 +164,7 @@ def show_choice():
 def show_ending():
     """엔딩 문장과 버튼(돌아보기 / 새로 시작)을 표시함."""
     info = ENDINGS[game["ending"]]
-    if info["good"]:
-        mark = "★"
-    else:
-        mark = "☆"
-    prompt_label.config(text=f"{mark} 엔딩: {info['title']}\n\n{info['text']}")
+    prompt_label.config(text=f"엔딩: {info['title']}\n\n{info['text']}")
 
     for button in buttons:
         button.pack_forget()

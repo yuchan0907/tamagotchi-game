@@ -30,8 +30,6 @@ def test_data():
                 assert name in STATUSES, f"{choice['id']}: 없는 상태 '{name}'"
             for name in option.get("remove", []):
                 assert name in STATUSES, f"{choice['id']}: 없는 상태 '{name}'"
-            if "ending" in option:
-                assert option["ending"] in ENDINGS, f"{choice['id']}: 없는 엔딩"
 
     assert len(ids) == len(set(ids)), "선택지 id 중복됨"
     print("data.py 검사 통과")
@@ -44,7 +42,7 @@ def test_images():
         assert os.path.exists(path), f"images/{name}.png 파일 없음"
         with open(path, "rb") as f:
             header = f.read(24)
-        assert header[:8] == b"\x89PNG\r\n\x1a\n", f"{name}.png  PNG 형식이 아님"
+        assert header[:8] == b"\x89PNG\r\n\x1a\n", f"{name}.png PNG 형식이 아님"
         width, height = struct.unpack(">II", header[16:24])
         assert (width, height) == (160, 160), f"{name}.png 크기 오류 ({width}x{height})"
 
@@ -52,10 +50,6 @@ def test_images():
         assert key in ENDING_IMAGES, f"ENDING_IMAGES에 '{key}' 엔딩 누락됨"
         assert ENDING_IMAGES[key] in IMAGE_NAMES, f"'{key}' 엔딩의 이미지 이름 누락됨"
     print("이미지 검사 통과")
-
-
-# 플레이 중 실제로 사용된 이미지 이름 목록
-used_images = set()
 
 
 def play_one_game():
@@ -71,7 +65,6 @@ def play_one_game():
             assert 0 <= value <= STAT_MAX
 
         # 어떤 상황에서도 존재하는 이미지 이름이 반환되어야 함
-        used_images.add(game_logic.pet_image_name())
         assert game_logic.pet_image_name() in IMAGE_NAMES
 
         count += 1
@@ -103,6 +96,5 @@ def test_vaccine():
 test_data()
 test_images()
 test_play()
-print("플레이 중 사용된 이미지:", sorted(used_images))
 test_vaccine()
 print("모든 테스트 통과!")

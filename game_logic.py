@@ -13,8 +13,7 @@
 import random
 
 from data import (
-    CHOICES, ENDING_IMAGES, ENDINGS, INITIAL_STATS, MAX_AGE, SEASONS, STAT_MAX,
-    STAT_NAMES, STATUSES,
+    CHOICES, ENDING_IMAGES, INITIAL_STATS, MAX_AGE, SEASONS, STAT_MAX, STAT_NAMES, STATUSES,
 )
 
 # 게임의 현재 상태를 담는 딕셔너리 (new_game() 호출 시 채워짐)
@@ -42,18 +41,10 @@ def new_game():
 # ----------------------------------------------------------------------
 # 2. 작은 도우미 함수들
 # ----------------------------------------------------------------------
-def limit(value):
-    """스테이터스를 0 ~ 10 사이로 유지함."""
-    if value < 0:
-        return 0
-    if value > STAT_MAX:
-        return STAT_MAX
-    return value
-
-
 def change_stat(stat, delta):
     """스테이터스를 delta만큼 변경함. (0~10 범위 유지)"""
-    game["stats"][stat] = limit(game["stats"][stat] + delta)
+    value = game["stats"][stat] + delta
+    game["stats"][stat] = max(0, min(STAT_MAX, value))
 
 
 def season_name():
@@ -220,18 +211,6 @@ def check_stat_ending():
     return ""
 
 
-def final_ending():
-    """MAX_AGE살까지 키웠을 때의 엔딩을 스테이터스 기준으로 결정함."""
-    stats = game["stats"]
-    if stats["intimacy"] >= 8:
-        return "bond"
-    if stats["happiness"] >= 8:
-        return "joyful"
-    if stats["health"] >= 8:
-        return "healthy"
-    return "ordinary"
-
-
 def advance_season(log):
     """계절을 한 칸 진행하고 나이/엔딩을 처리함. 엔딩이 나면 엔딩 키를 반환함."""
     game["season"] += 1
@@ -242,7 +221,7 @@ def advance_season(log):
         game["age"] += 1
         log.append(f"다마고치가 {game['age']}살이 되었다!")
         if game["age"] >= MAX_AGE:
-            return final_ending()
+            return "ten_years"
 
     log.append(f"계절이 {season_name()}(으)로 바뀌었다.")
 
@@ -291,15 +270,10 @@ def choose(index):
 
     result = {"text": option.get("result", ""), "log": log}
 
-    # 4. 매우 잘못된 선택 -> 바로 엔딩
-    if "ending" in option:
-        game["ending"] = option["ending"]
-        return result
-
-    # 5. 상태 효과 발동
+    # 4. 상태 효과 발동
     apply_status_effects(log)
 
-    # 6. 엔딩 검사: 스테이터스 -> 계절/나이
+    # 5. 엔딩 검사: 스테이터스 -> 계절/나이
     ending = check_stat_ending()
     if ending == "":
         ending = advance_season(log)

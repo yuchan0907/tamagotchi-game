@@ -62,6 +62,9 @@ def status_description(name):
         else:
             lines.append(f"매 턴마다 {STAT_NAMES[stat]}이(가) {-delta} 감소합니다")
 
+    if name == "예방접종":
+        lines.append("'감기' 상태에 걸리지 않습니다")
+
     lines.append("")
     lines.append(info["flavor"])
     lines.append("")
@@ -171,6 +174,15 @@ def pick_next_choice():
 # ----------------------------------------------------------------------
 # 4. 선택지를 골랐을 때 (한 턴 진행)
 # ----------------------------------------------------------------------
+def add_status(name, turns, log):
+    """상태창에 상태를 추가함. (이미 있으면 남은 턴을 덮어씀)"""
+    # 예방접종 상태에서는 감기에 걸리지 않음
+    if name == "감기" and "예방접종" in game["statuses"]:
+        log.append("예방접종 덕분에 '감기'를 막았다!")
+        return
+    game["statuses"][name] = turns
+
+
 def apply_status_effects(log):
     """상태창에 있는 모든 상태의 효과를 발동한 뒤 남은 턴을 1 감소시킴."""
     # list(...)로 복사하여 반복하는 이유: 반복 중 딕셔너리에서 삭제하면 오류가 나기 때문임
@@ -243,7 +255,7 @@ def choose(index):
     for name in option.get("remove", []):
         game["statuses"].pop(name, None)      # 있으면 삭제하고, 없으면 그대로 넘어감
     for name, turns in option.get("add", {}).items():
-        game["statuses"][name] = turns        # 이미 있으면 남은 턴을 덮어씀
+        add_status(name, turns, log)
 
     # 3. 기록 남기기 (엔딩 후 돌아보기)
     game["turn"] += 1

@@ -69,18 +69,12 @@ def play_one_game():
 
         count += 1
         assert count < 500, "게임이 끝나지 않음"
-    return game["ending"]
 
 
 def test_play():
-    results = {}
     for i in range(2000):
-        ending = play_one_game()
-        results[ending] = results.get(ending, 0) + 1
-
-    print("2000판 플레이 결과 (엔딩별 횟수):")
-    for key in results:
-        print(f"  {ENDINGS[key]['title']} : {results[key]}")
+        play_one_game()
+    print("2000판 자동 플레이 통과")
 
 
 test_data()

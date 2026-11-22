@@ -34,5 +34,4 @@ game_logic.py          게임 "규칙" (턴 진행, 계절, 엔딩 판정, 이�
 main.py                "화면" (tkinter로 그리기, 버튼)
 test_logic.py          자동 테스트
 images/                강아지 도트 이미지 (PNG)
-tools/make_images.py   이미지를 만드는 도구 (게임 실행에는 필요 없음)
 ```

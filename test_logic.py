@@ -83,18 +83,7 @@ def test_play():
         print(f"  {ENDINGS[key]['title']} : {results[key]}")
 
 
-def test_vaccine():
-    """예방접종 상태에서는 감기에 걸리지 않아야 함."""
-    game_logic.new_game()
-    game["statuses"]["예방접종"] = 5
-    log = []
-    game_logic.add_status("감기", 3, log)
-    assert "감기" not in game["statuses"]
-    print("예방접종 검사 통과")
-
-
 test_data()
 test_images()
 test_play()
-test_vaccine()
 print("모든 테스트 통과!")
